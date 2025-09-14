@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  salesperson
+  manager
+  warehouse
+}
+
+enum OrderStatus {
+  draft
+  submitted
+  approved
+  fulfilled
+  rejected
+}
+
+enum LineStatus {
+  pending
+  fulfilled
+  backordered
+}
+
+model User {
+  id                     String                @id @default(uuid()) @db.Uuid
+  email                  String                @unique
+  role                   UserRole
+  name                   String
+  createdAt              DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  salesOrders            SaleOrder[]           @relation("Salesperson")
+  managedOrders          SaleOrder[]           @relation("Manager")
+  warehouseOrders        SaleOrder[]           @relation("WarehouseStaff")
+  attachmentsUploaded    Attachment[]
+  orderStatusChanges     OrderStatusHistory[]
+
+  @@map("users")
+}
+
+model Product {
+  id                     String                @id @default(uuid()) @db.Uuid
+  code                   String                @unique
+  name                   String
+  category               String?
+  supplierId             String?               @map("supplier_id") @db.Uuid
+  wholesalePrice         Decimal               @map("wholesale_price") @db.Decimal(10, 2)
+  retailPrice            Decimal               @map("retail_price") @db.Decimal(10, 2)
+  taxRate                Decimal               @default(0) @map("tax_rate") @db.Decimal(5, 4)
+  stockQuantity          Int                   @map("stock_quantity")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  orderItems             OrderItem[]
+
+  @@index([code])
+  @@index([category])
+  @@map("products")
+}
+
+model SaleOrder {
+  id                     String                @id @default(uuid()) @db.Uuid
+  customerName           String                @map("customer_name")
+  contactPerson          String                @map("contact_person")
+  email                  String
+  shippingAddress        String?               @map("shipping_address")
+  deliveryDate           DateTime?             @map("delivery_date") @db.Date
+  status                 OrderStatus           @default(draft)
+  salespersonId          String                @map("salesperson_id") @db.Uuid
+  managerId              String?               @map("manager_id") @db.Uuid
+  warehouseId            String?               @map("warehouse_id") @db.Uuid
+  notes                  String                @default("")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  salesperson            User                  @relation("Salesperson", fields: [salespersonId], references: [id])
+  manager                User?                 @relation("Manager", fields: [managerId], references: [id])
+  warehouseStaff         User?                 @relation("WarehouseStaff", fields: [warehouseId], references: [id])
+  orderItems             OrderItem[]
+  attachments            Attachment[]
+  statusHistory          OrderStatusHistory[]
+
+  @@index([status])
+  @@index([salespersonId])
+  @@map("sale_orders")
+}
+
+model OrderItem {
+  id                     String                @id @default(uuid()) @db.Uuid
+  orderId                String                @map("order_id") @db.Uuid
+  productId              String                @map("product_id") @db.Uuid
+  quantity               Int
+  unitPrice              Decimal               @map("unit_price") @db.Decimal(10, 2)
+  lineTotal              Decimal               @map("line_total") @db.Decimal(10, 2)
+  isInStock              Boolean               @default(true) @map("is_in_stock")
+  lineStatus             LineStatus            @default(pending) @map("line_status")
+
+  // Relations
+  order                  SaleOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                Product               @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Attachment {
+  id                     String                @id @default(uuid()) @db.Uuid
+  orderId                String                @map("order_id") @db.Uuid
+  fileUrl                String                @map("file_url")
+  uploadedBy             String                @map("uploaded_by") @db.Uuid
+  uploadedAt             DateTime              @default(now()) @map("uploaded_at")
+
+  // Relations
+  order                  SaleOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  uploader               User                  @relation(fields: [uploadedBy], references: [id])
+
+  @@map("attachments")
+}
+
+model OrderStatusHistory {
+  id                     String                @id @default(uuid()) @db.Uuid
+  orderId                String                @map("order_id") @db.Uuid
+  previousStatus         String                @map("previous_status")
+  newStatus              String                @map("new_status")
+  changedBy              String                @map("changed_by") @db.Uuid
+  changedAt              DateTime              @default(now()) @map("changed_at")
+
+  // Relations
+  order                  SaleOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user                   User                  @relation(fields: [changedBy], references: [id])
+
+  @@map("order_status_history")
+}
