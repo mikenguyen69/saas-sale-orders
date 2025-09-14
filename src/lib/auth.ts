@@ -34,7 +34,9 @@ export function createRouteHandlerSupabaseClient() {
   return createServerSupabaseClient()
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<
+  Database['public']['Tables']['users']['Row'] | null
+> {
   const supabase = createServerSupabaseClient()
 
   try {

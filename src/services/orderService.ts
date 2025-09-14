@@ -1,12 +1,17 @@
 import { prisma } from '@/lib/prisma'
-import { OrderStatus, UserRole, SaleOrder } from '@/types'
+import { OrderStatus, UserRole } from '@/types'
 import { ORDER_WORKFLOW } from '@/utils/constants'
 
 export class OrderService {
-  static async createOrder(data: Partial<SaleOrder>, userId: string) {
+  static async createOrder(data: Record<string, unknown>, userId: string) {
     return prisma.saleOrder.create({
       data: {
-        ...data,
+        customerName: data.customerName as string,
+        contactPerson: data.contactPerson as string,
+        email: data.email as string,
+        shippingAddress: data.shippingAddress as string | null,
+        deliveryDate: data.deliveryDate as Date | null,
+        notes: (data.notes as string) || '',
         salespersonId: userId,
         status: 'draft',
       },
@@ -21,13 +26,19 @@ export class OrderService {
     })
   }
 
-  static async updateOrder(id: string, data: Partial<SaleOrder>, _userId: string) {
+  static async updateOrder(id: string, data: Record<string, unknown>, _userId: string) {
+    const updateData: Record<string, unknown> = {}
+    if (data.customerName) updateData.customerName = data.customerName as string
+    if (data.contactPerson) updateData.contactPerson = data.contactPerson as string
+    if (data.email) updateData.email = data.email as string
+    if (data.shippingAddress !== undefined)
+      updateData.shippingAddress = data.shippingAddress as string | null
+    if (data.deliveryDate !== undefined) updateData.deliveryDate = data.deliveryDate as Date | null
+    if (data.notes !== undefined) updateData.notes = data.notes as string
+
     return prisma.saleOrder.update({
       where: { id },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: {
         orderItems: {
           include: {
@@ -215,9 +226,12 @@ export class OrderService {
     targetStatus: OrderStatus,
     userRole: UserRole
   ) {
-    const workflow = ORDER_WORKFLOW[currentStatus]
-    return (
-      workflow.canTransitionTo.includes(targetStatus) && workflow.allowedRoles.includes(userRole)
-    )
+    const workflow = ORDER_WORKFLOW[currentStatus as keyof typeof ORDER_WORKFLOW]
+    if (!workflow) return false
+
+    const canTransition = workflow.canTransitionTo.some(status => status === targetStatus)
+    const roleAllowed = workflow.allowedRoles.some(role => role === userRole)
+
+    return canTransition && roleAllowed
   }
 }

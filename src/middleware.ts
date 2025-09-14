@@ -45,7 +45,7 @@ export async function middleware(req: NextRequest) {
 
     if (user) {
       // Add user role to headers for API route access
-      res.headers.set('x-user-role', user.role)
+      res.headers.set('x-user-role', (user as { role: string }).role)
       res.headers.set('x-user-id', session.user.id)
     }
   }
