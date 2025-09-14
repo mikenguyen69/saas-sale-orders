@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run format:*)",
+      "Bash(npm update)",
+      "Bash(npx npm-check-updates:*)",
+      "Bash(npx husky init:*)",
+      "Bash(npx lint-staged:*)",
+      "Bash(git add:*)",
+      "Bash(npm run prepare:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
