@@ -1,0 +1,61 @@
+name: Dependency Update Check
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for outdated packages
+        run: npx npm-check-updates --format group
+
+      - name: Update package.json
+        run: npx npm-check-updates -u
+
+      - name: Install updated dependencies
+        run: npm install
+
+      - name: Run tests with updated dependencies
+        run: npm test
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies'
+          title: 'chore: automated dependency updates'
+          body: |
+            ## Automated Dependency Updates
+
+            This PR contains automated dependency updates.
+
+            ### Changes
+            - Updated npm packages to latest versions
+            - All tests pass with updated dependencies
+            - TypeScript compilation successful
+
+            Please review the changes and ensure everything works as expected.
+          branch: chore/dependency-updates
+          delete-branch: true

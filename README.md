@@ -102,6 +102,55 @@ Required environment variables (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
 - `DATABASE_URL` - Database connection string for Prisma
 
+## CI/CD Pipeline
+
+This project includes comprehensive GitHub Actions workflows:
+
+### Workflows
+
+- **CI Pipeline** (`.github/workflows/ci.yml`):
+  - Runs on every push and pull request
+  - Tests on Node.js 18.x and 20.x
+  - Performs linting, formatting checks, type checking, and testing
+  - Uploads test coverage to Codecov
+  - Builds the application
+
+- **Deployment** (`.github/workflows/deploy.yml`):
+  - Automatically deploys to Vercel on main branch pushes
+  - Runs tests before deployment
+  - Can be manually triggered
+
+- **Security Scanning** (`.github/workflows/security.yml`):
+  - Runs npm audit for vulnerabilities
+  - Performs CodeQL analysis for code security
+  - Uses Trivy for comprehensive security scanning
+  - Runs weekly on schedule
+
+- **Dependency Updates** (`.github/workflows/dependency-update.yml`):
+  - Automatically checks for outdated packages weekly
+  - Creates pull requests with dependency updates
+  - Ensures tests pass with updated dependencies
+
+### Required Secrets
+
+To use the GitHub Actions workflows, configure these secrets in your repository:
+
+**Supabase:**
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `DATABASE_URL`
+
+**Vercel Deployment:**
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+**Optional:**
+
+- `CODECOV_TOKEN` (for test coverage reporting)
+
 ## Deployment
 
 This application is optimized for deployment on Vercel:
@@ -109,7 +158,8 @@ This application is optimized for deployment on Vercel:
 1. Push your code to GitHub
 2. Connect your repository to Vercel
 3. Configure environment variables in Vercel dashboard
-4. Deploy
+4. Set up GitHub secrets for automated deployment
+5. Deploy automatically via GitHub Actions or manually through Vercel
 
 ## Development Workflow
 
