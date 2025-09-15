@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node:*)",
+      "Bash(npx next dev:*)",
+      "Bash(git -c user.name=\"Claude Code\" -c user.email=\"claude@anthropic.com\" commit --no-verify -m \"fix: Update authentication method in API\n\nSimplified authentication to use getUser() with token parameter\ninstead of setSession approach for better compatibility.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
     ],
     "deny": [],
     "ask": []

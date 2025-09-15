@@ -12,7 +12,7 @@ async function signInAndGetToken() {
   try {
     // Sign in with email/password
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: 'manager@test.com',
+      email: 'michael.chen@thegoodvitaminco.co.nz',
       password: 'testpassword123'
     })
 
@@ -27,7 +27,7 @@ async function signInAndGetToken() {
     console.log('📧 Email:', data.user.email)
 
     // Test API call with token
-    const response = await fetch('http://localhost:3000/api/v1/users', {
+    const response = await fetch('http://localhost:3001/api/v1/users', {
       headers: {
         'Authorization': `Bearer ${data.session.access_token}`,
         'Content-Type': 'application/json'

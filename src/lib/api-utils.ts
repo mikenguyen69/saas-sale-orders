@@ -166,27 +166,23 @@ export async function getAuthenticatedUser(request: NextRequest) {
           // No-op for API routes
         },
       },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
     }
   )
 
-  // Set the session with the JWT token and then verify user
-  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-    access_token: token,
-    refresh_token: '',
-  })
-
-  if (sessionError || !sessionData.user) {
-    throw new ApiError(401, 'Invalid or expired JWT token')
-  }
-
-  // Verify user with getUser() for additional security
+  // Use getUser() with the token directly for secure authentication verification
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser(token)
 
   if (userError || !user) {
-    throw new ApiError(401, 'Authentication verification failed')
+    console.error('Authentication error:', userError?.message)
+    throw new ApiError(401, 'Invalid or expired JWT token')
   }
 
   // Get user details from database with additional verification

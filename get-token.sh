@@ -10,7 +10,7 @@ echo "🔐 Getting JWT token from Supabase..."
 AUTH_URL="http://127.0.0.1:54321/auth/v1/token?grant_type=password"
 
 # Credentials (these would be from your seeded users)
-EMAIL="manager@test.com"
+EMAIL="michael.chen@thegoodvitaminco.co.nz"
 PASSWORD="testpassword123"
 
 # API Key for local Supabase
@@ -36,7 +36,7 @@ if [ -n "$JWT_TOKEN" ]; then
   echo "🚀 Testing API with token..."
 
   # Test API call
-  API_RESPONSE=$(curl -s -X GET "http://localhost:3000/api/v1/users" \
+  API_RESPONSE=$(curl -s -X GET "http://localhost:3001/api/v1/users" \
     -H "Authorization: Bearer $JWT_TOKEN" \
     -H "Content-Type: application/json")
 
