@@ -115,14 +115,14 @@ export default function AuthExample() {
 
         <div className="space-y-2">
           <button
-            onClick={signIn}
+            onClick={handleSignIn}
             disabled={loading}
             className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 disabled:opacity-50"
           >
             {loading ? 'Loading...' : 'Sign In'}
           </button>
           <button
-            onClick={signUp}
+            onClick={handleSignUp}
             disabled={loading}
             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
           >
