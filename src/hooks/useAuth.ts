@@ -39,7 +39,7 @@ export function useAuth(): AuthState {
           setSession(null)
         } else {
           setUser(user)
-          // Only get session if user is verified
+          // Get the current session after user verification
           const { data: { session } } = await supabase.auth.getSession()
           setSession(session)
         }
