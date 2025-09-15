@@ -37,6 +37,7 @@ model User {
   role                   UserRole
   name                   String
   createdAt              DateTime              @default(now()) @map("created_at")
+  deletedAt              DateTime?             @map("deleted_at")
 
   // Relations
   salesOrders            SaleOrder[]           @relation("Salesperson")
@@ -45,6 +46,7 @@ model User {
   attachmentsUploaded    Attachment[]
   orderStatusChanges     OrderStatusHistory[]
 
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -60,12 +62,14 @@ model Product {
   stockQuantity          Int                   @map("stock_quantity")
   createdAt              DateTime              @default(now()) @map("created_at")
   updatedAt              DateTime              @updatedAt @map("updated_at")
+  deletedAt              DateTime?             @map("deleted_at")
 
   // Relations
   orderItems             OrderItem[]
 
   @@index([code])
   @@index([category])
+  @@index([deletedAt])
   @@map("products")
 }
 
@@ -83,6 +87,7 @@ model SaleOrder {
   notes                  String                @default("")
   createdAt              DateTime              @default(now()) @map("created_at")
   updatedAt              DateTime              @updatedAt @map("updated_at")
+  deletedAt              DateTime?             @map("deleted_at")
 
   // Relations
   salesperson            User                  @relation("Salesperson", fields: [salespersonId], references: [id])
@@ -94,6 +99,7 @@ model SaleOrder {
 
   @@index([status])
   @@index([salespersonId])
+  @@index([deletedAt])
   @@map("sale_orders")
 }
 

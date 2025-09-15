@@ -22,7 +22,8 @@
       "Bash(npx supabase:*)",
       "Bash(npm run:*)",
       "Bash(git commit:*)",
-      "Bash(git -c user.name=\"Claude Code\" -c user.email=\"claude@anthropic.com\" commit -m \"$(cat <<''EOF''\n[fix] Fix seed file enum values for order status\n\nUpdated seed.sql to use correct order_status enum values:\n- Changed ''shipped'' to ''fulfilled''\n- Changed ''completed'' to ''fulfilled'' \n- Changed ''pending'' to ''draft''\n\nThis resolves database seeding errors and aligns with the schema definition.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git -c user.name=\"Claude Code\" -c user.email=\"claude@anthropic.com\" commit -m \"$(cat <<''EOF''\n[fix] Fix seed file enum values for order status\n\nUpdated seed.sql to use correct order_status enum values:\n- Changed ''shipped'' to ''fulfilled''\n- Changed ''completed'' to ''fulfilled'' \n- Changed ''pending'' to ''draft''\n\nThis resolves database seeding errors and aligns with the schema definition.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []
