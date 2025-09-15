@@ -141,6 +141,19 @@ export async function validateQuery<T>(request: NextRequest, schema: ZodSchema<T
 }
 
 export async function getAuthenticatedUser(request: NextRequest) {
+  // Extract JWT token from Authorization header
+  const authHeader = request.headers.get('authorization')
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new ApiError(401, 'Authorization header with Bearer token required')
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+
+  if (!token) {
+    throw new ApiError(401, 'JWT token required')
+  }
+
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -156,26 +169,35 @@ export async function getAuthenticatedUser(request: NextRequest) {
     }
   )
 
-  // Use getUser() for secure authentication verification
-  // This method validates the JWT token against the Supabase Auth server
+  // Set the session with the JWT token and then verify user
+  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    access_token: token,
+    refresh_token: '',
+  })
+
+  if (sessionError || !sessionData.user) {
+    throw new ApiError(401, 'Invalid or expired JWT token')
+  }
+
+  // Verify user with getUser() for additional security
   const {
     data: { user },
-    error,
+    error: userError,
   } = await supabase.auth.getUser()
 
-  if (error || !user) {
-    throw new ApiError(401, 'Authentication required')
+  if (userError || !user) {
+    throw new ApiError(401, 'Authentication verification failed')
   }
 
   // Get user details from database with additional verification
-  const { data: userDetails, error: userError } = await supabase
+  const { data: userDetails, error: dbUserError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .is('deleted_at', null) // Ensure user is not soft-deleted
     .single()
 
-  if (userError || !userDetails) {
+  if (dbUserError || !userDetails) {
     throw new ApiError(404, 'User not found in database or account is deactivated')
   }
 
