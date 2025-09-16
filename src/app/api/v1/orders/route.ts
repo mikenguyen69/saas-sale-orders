@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import {
   createErrorResponse,
   createSuccessResponse,
+  createPaginatedResponse,
   getAuthenticatedUser,
   validateRequest,
   validateQuery,
@@ -116,9 +117,13 @@ export async function GET(request: NextRequest) {
       .is('deleted_at', null)
 
     // Role-based filtering
+    console.log('User role:', userDetails.role, 'User ID:', userDetails.id)
     if (userDetails.role === 'salesperson') {
       // Salespeople can only see their own orders
+      console.log('Filtering orders for salesperson:', userDetails.id)
       queryBuilder = queryBuilder.eq('salesperson_id', userDetails.id)
+    } else {
+      console.log('User is not salesperson, showing all orders')
     }
 
     // Apply filters
@@ -146,21 +151,25 @@ export async function GET(request: NextRequest) {
 
     const { data: orders, error, count } = await queryBuilder
 
+    console.log('Database query result:', {
+      ordersCount: orders?.length,
+      totalCount: count,
+      error: error?.message,
+      firstOrder: orders?.[0]?.customer_name,
+      queryFilters: {
+        page: query.page,
+        limit: query.limit,
+        status: query.status,
+        salesperson_id: query.salespersonId,
+      },
+    })
+
     if (error) {
+      console.error('Database error details:', error)
       throw new Error(`Database error: ${error.message}`)
     }
 
-    const totalPages = Math.ceil((count || 0) / query.limit)
-
-    return createSuccessResponse({
-      orders: orders || [],
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total: count || 0,
-        totalPages,
-      },
-    })
+    return createPaginatedResponse(orders || [], query.page, query.limit, count || 0)
   } catch (error) {
     return createErrorResponse(error)
   }

@@ -20,6 +20,7 @@ export const ProductQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
   inStock: z.enum(['true', 'false']).optional(),
+  lowStock: z.enum(['true', 'false']).optional(),
   page: z.string().regex(/^\d+$/).default('1').transform(Number),
   limit: z
     .string()

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import {
   createErrorResponse,
   createSuccessResponse,
+  createPaginatedResponse,
   getAuthenticatedUser,
   requireRole,
   validateRequest,
@@ -94,6 +95,8 @@ export async function GET(request: NextRequest) {
 
     console.log('User details:', userDetails)
 
+    // Note: Removed mock data - now using real Supabase data
+
     let queryBuilder = supabase
       .from('products')
       .select('*', { count: 'exact' })
@@ -112,6 +115,10 @@ export async function GET(request: NextRequest) {
       queryBuilder = queryBuilder.gt('stock_quantity', 0)
     } else if (query.inStock === 'false') {
       queryBuilder = queryBuilder.eq('stock_quantity', 0)
+    }
+
+    if (query.lowStock === 'true') {
+      queryBuilder = queryBuilder.lte('stock_quantity', 10).gt('stock_quantity', 0)
     }
 
     // Apply pagination
@@ -137,22 +144,9 @@ export async function GET(request: NextRequest) {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    const totalPages = count ? Math.ceil(count / query.limit) : 0
-    console.log('Calculated totalPages:', totalPages, 'from count:', count)
+    console.log('Final response data:', products)
 
-    const responseData = {
-      products: products || [],
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total: count || 0,
-        totalPages,
-      },
-    }
-
-    console.log('Final response data:', responseData)
-
-    return createSuccessResponse(responseData)
+    return createPaginatedResponse(products || [], query.page, query.limit, count || 0)
   } catch (error) {
     return createErrorResponse(error)
   }

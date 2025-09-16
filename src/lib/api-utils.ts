@@ -178,14 +178,76 @@ export async function getAuthenticatedUser(request: NextRequest) {
   }
 
   // Get user details from database with additional verification
-  const { data: userDetails, error: dbUserError } = await supabase
+  let { data: userDetails, error: dbUserError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .is('deleted_at', null) // Ensure user is not soft-deleted
     .single()
 
-  if (dbUserError || !userDetails) {
+  // If user doesn't exist in our users table, create them automatically
+  if (dbUserError && dbUserError.code === 'PGRST116') {
+    // Extract name from user metadata or email
+    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+
+    console.log('Creating user profile for:', {
+      id: user.id,
+      email: user.email,
+      name,
+      metadata: user.user_metadata,
+    })
+
+    // Auto-create user with default role
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        id: user.id,
+        email: user.email || '',
+        name,
+        role: 'salesperson', // Default role
+      })
+      .select()
+      .single()
+
+    if (createError) {
+      console.error('Error creating user profile:', {
+        error: createError,
+        code: createError.code,
+        message: createError.message,
+        details: createError.details,
+        hint: createError.hint,
+      })
+
+      // Check if it's a unique constraint violation (user already exists)
+      if (createError.code === '23505') {
+        console.log('User already exists, trying to fetch again...')
+        const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .is('deleted_at', null)
+          .single()
+
+        if (fetchError) {
+          console.error('Failed to fetch existing user:', fetchError)
+          throw new ApiError(500, 'User exists but cannot be retrieved')
+        }
+
+        userDetails = existingUser
+      } else {
+        throw new ApiError(500, `Failed to create user profile: ${createError.message}`)
+      }
+    } else {
+      userDetails = newUser
+    }
+  } else if (dbUserError || !userDetails) {
+    console.error('Database user error:', {
+      error: dbUserError,
+      code: dbUserError?.code,
+      message: dbUserError?.message,
+      userId: user.id,
+      userEmail: user.email,
+    })
     throw new ApiError(404, 'User not found in database or account is deactivated')
   }
 
