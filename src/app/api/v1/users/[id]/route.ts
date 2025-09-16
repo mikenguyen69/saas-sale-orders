@@ -67,9 +67,14 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
-    const { id } = params
+    const { id: rawId } = params
+    const id = rawId.trim()
 
     // Users can view their own profile, managers can view any user
+    console.log('Debug - userDetails.id:', userDetails.id)
+    console.log('Debug - requested id:', id)
+    console.log('Debug - userDetails.role:', userDetails.role)
+
     if (userDetails.id !== id && userDetails.role !== 'manager') {
       throw new ApiError(403, 'Access denied')
     }
@@ -170,7 +175,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
-    const { id } = params
+    const { id: rawId } = params
+    const id = rawId.trim()
 
     // Users can update their own profile, managers can update any user
     const isOwnProfile = userDetails.id === id
@@ -285,7 +291,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
-    const { id } = params
+    const { id: rawId } = params
+    const id = rawId.trim()
 
     // Only managers can delete users
     requireRole(userDetails.role, ['manager'])
