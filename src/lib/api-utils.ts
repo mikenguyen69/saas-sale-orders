@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError, ZodSchema } from 'zod'
-import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/supabase'
 
-export type ApiResponse<T = any> = {
+export type ApiResponse<T = unknown> = {
   success: boolean
   data?: T
   error?: string
   message?: string
-  details?: any
+  details?: unknown
 }
 
 export type PaginatedResponse<T> = {
@@ -28,7 +28,7 @@ export class ApiError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message)
     this.name = 'ApiError'
@@ -154,18 +154,10 @@ export async function getAuthenticatedUser(request: NextRequest) {
     throw new ApiError(401, 'JWT token required')
   }
 
-  const supabase = createServerClient<Database>(
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {
-          // No-op for API routes
-        },
-      },
       global: {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -206,14 +198,14 @@ export function requireRole(userRole: string, allowedRoles: string[]) {
   }
 }
 
-export async function withAuth<T extends any[]>(
+export async function withAuth<T extends unknown[]>(
   request: NextRequest,
   handler: (
     request: NextRequest,
     context: {
-      user: any
-      userDetails: any
-      supabase: any
+      user: NonNullable<unknown>
+      userDetails: NonNullable<unknown>
+      supabase: NonNullable<unknown>
     },
     ...args: T
   ) => Promise<NextResponse>
