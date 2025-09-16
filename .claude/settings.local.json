@@ -1,30 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(npx create-next-app:*)",
-      "Bash(chmod:*)",
-      "Bash(npm install)",
-      "Bash(npm install:*)",
-      "Bash(npm run type-check:*)",
-      "Bash(npx prisma generate:*)",
-      "Bash(npm run test:*)",
-      "Bash(npm run lint)",
-      "Bash(npm run format:*)",
-      "Bash(npm update)",
-      "Bash(npx npm-check-updates:*)",
-      "Bash(npx husky init:*)",
-      "Bash(npx lint-staged:*)",
-      "Bash(git add:*)",
-      "Bash(npm run prepare:*)",
-      "Bash(npm test:*)",
-      "Bash(npx jest:*)",
-      "Bash(npm run build:*)",
-      "Bash(npx supabase:*)",
-      "Bash(npm run:*)",
-      "Bash(git commit:*)",
-      "Bash(git -c user.name=\"Claude Code\" -c user.email=\"claude@anthropic.com\" commit -m \"$(cat <<''EOF''\n[fix] Fix seed file enum values for order status\n\nUpdated seed.sql to use correct order_status enum values:\n- Changed ''shipped'' to ''fulfilled''\n- Changed ''completed'' to ''fulfilled'' \n- Changed ''pending'' to ''draft''\n\nThis resolves database seeding errors and aligns with the schema definition.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(psql:*)"
-    ],
+    "allow": ["Bash(npm run dev:*)", "Bash(mkdir:*)", "Bash(node:*)"],
     "deny": [],
     "ask": []
   }

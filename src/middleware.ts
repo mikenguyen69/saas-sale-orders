@@ -40,34 +40,35 @@ export async function middleware(req: NextRequest) {
       }
     )
 
+    // Use secure getUser() method instead of getSession()
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+    } = await supabase.auth.getUser()
 
     // If user is not authenticated and trying to access protected routes
-    if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
+    if (!user && req.nextUrl.pathname.startsWith('/dashboard')) {
       return NextResponse.redirect(new URL('/auth/signin', req.url))
     }
 
     // If user is authenticated and trying to access auth pages
-    if (session && req.nextUrl.pathname.startsWith('/auth')) {
+    if (user && req.nextUrl.pathname.startsWith('/auth')) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
     // Role-based access control for API routes
-    if (req.nextUrl.pathname.startsWith('/api/') && session) {
+    if (req.nextUrl.pathname.startsWith('/api/') && user) {
       try {
-        const { data: user } = await supabase
+        const { data: userDetails } = await supabase
           .from('users')
           .select('role')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single()
 
-        if (user && user.role) {
+        if (userDetails && userDetails.role) {
           // Only set headers if response hasn't been sent
           if (!res.headers.get('location')) {
-            res.headers.set('x-user-role', (user as { role: string }).role)
-            res.headers.set('x-user-id', session.user.id)
+            res.headers.set('x-user-role', (userDetails as { role: string }).role)
+            res.headers.set('x-user-id', user.id)
           }
         }
       } catch (error) {

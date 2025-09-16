@@ -40,21 +40,23 @@ export async function getCurrentUser(): Promise<
   const supabase = createServerSupabaseClient()
 
   try {
+    // Use secure getUser() method instead of getSession()
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
 
-    if (!session?.user) {
+    if (error || !user) {
       return null
     }
 
-    const { data: user } = await supabase
+    const { data: userDetails } = await supabase
       .from('users')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
-    return user
+    return userDetails
   } catch (error) {
     console.error('Error getting current user:', error)
     return null
