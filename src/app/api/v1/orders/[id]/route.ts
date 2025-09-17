@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         salesperson:users!salesperson_id(id, name, email),
         manager:users!manager_id(id, name, email),
         warehouse:users!warehouse_id(id, name, email),
-        items:order_items(
+        order_items(
           id,
           product_id,
           quantity,
@@ -328,7 +328,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         throw new Error(`Database error: ${itemsError.message}`)
       }
 
-      updatedOrder.items = items
+      updatedOrder.order_items = items
     } else {
       // Get existing items
       const { data: items } = await supabase
@@ -341,7 +341,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         )
         .eq('order_id', id)
 
-      updatedOrder.items = items || []
+      updatedOrder.order_items = items || []
     }
 
     return createSuccessResponse(updatedOrder, 'Order updated successfully')

@@ -48,8 +48,10 @@ interface OrderFormProps {
 
 export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const [orderItems, setOrderItems] = useState<OrderItemRow[]>(() => {
-    if (order?.order_items) {
-      return order.order_items.map(item => ({
+    // Handle both 'order_items' and 'items' properties for compatibility
+    const items = order?.order_items || (order as any)?.items
+    if (items && Array.isArray(items)) {
+      return items.map(item => ({
         ...item,
         tempId: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
       }))
