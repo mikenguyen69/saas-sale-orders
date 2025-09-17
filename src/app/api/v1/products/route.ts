@@ -122,9 +122,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply pagination
-    const offset = (query.page - 1) * query.limit
-    console.log('Applying pagination:', { offset, limit: query.limit, page: query.page })
-    queryBuilder = queryBuilder.range(offset, offset + query.limit - 1).order('name')
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+    const offset = (page - 1) * limit
+    console.log('Applying pagination:', { offset, limit, page })
+    queryBuilder = queryBuilder.range(offset, offset + limit - 1).order('name')
 
     console.log('About to execute query...')
 
@@ -146,7 +148,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Final response data:', products)
 
-    return createPaginatedResponse(products || [], query.page, query.limit, count || 0)
+    return createPaginatedResponse(products || [], page, limit, count || 0)
   } catch (error) {
     return createErrorResponse(error)
   }

@@ -21,16 +21,8 @@ export const ProductQuerySchema = z.object({
   category: z.string().optional(),
   inStock: z.enum(['true', 'false']).optional(),
   lowStock: z.enum(['true', 'false']).optional(),
-  page: z.string().regex(/^\d+$/).default('1').transform(Number),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .default('20')
-    .transform(val => {
-      const num = Number(val)
-      if (num > 100) throw new Error('Limit cannot exceed 100')
-      return num
-    }),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 })
 
 export type CreateProductInput = z.infer<typeof CreateProductSchema>
