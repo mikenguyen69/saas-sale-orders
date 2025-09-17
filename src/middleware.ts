@@ -47,7 +47,7 @@ export async function middleware(req: NextRequest) {
 
     // If user is not authenticated and trying to access protected routes
     if (!user && req.nextUrl.pathname.startsWith('/dashboard')) {
-      return NextResponse.redirect(new URL('/auth/signin', req.url))
+      return NextResponse.redirect(new URL('/auth/login', req.url))
     }
 
     // If user is authenticated and trying to access auth pages

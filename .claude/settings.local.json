@@ -1,6 +1,13 @@
 {
   "permissions": {
-    "allow": ["Bash(npm run dev:*)", "Bash(mkdir:*)", "Bash(node:*)"],
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)"
+    ],
     "deny": [],
     "ask": []
   }

@@ -32,7 +32,10 @@ export function useAuth(): AuthState {
         setLoading(true)
 
         // Always use getUser() for secure authentication verification
-        const { data: { user }, error } = await supabase.auth.getUser()
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser()
 
         if (error || !user) {
           setUser(null)
@@ -40,7 +43,9 @@ export function useAuth(): AuthState {
         } else {
           setUser(user)
           // Get the current session after user verification
-          const { data: { session } } = await supabase.auth.getSession()
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
           setSession(session)
         }
       } catch (error) {
@@ -62,7 +67,10 @@ export function useAuth(): AuthState {
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         // Always verify user authenticity on auth events
-        const { data: { user }, error } = await supabase.auth.getUser()
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser()
         if (!error && user) {
           setUser(user)
           setSession(session)
@@ -86,7 +94,7 @@ export function useAuth(): AuthState {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -96,7 +104,10 @@ export function useAuth(): AuthState {
       }
 
       // Verify the user after sign in
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
       if (userError || !user) {
         return { error: 'Failed to verify user authentication' }
       }
@@ -112,7 +123,7 @@ export function useAuth(): AuthState {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
