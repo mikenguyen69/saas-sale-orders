@@ -77,7 +77,9 @@ export async function GET(request: NextRequest) {
 
     const ordersByStatus = statusCounts?.reduce(
       (acc: any, order) => {
-        acc[order.status] = (acc[order.status] || 0) + 1
+        if (order.status) {
+          acc[order.status] = (acc[order.status] || 0) + 1
+        }
         return acc
       },
       {

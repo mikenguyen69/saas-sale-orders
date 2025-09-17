@@ -41,14 +41,14 @@ export function useRealtimeSubscription({
     let subscription = supabase
       .channel(`realtime-${table}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event,
           schema: 'public',
           table,
           ...(filter && { filter }),
         },
-        payload => {
+        (payload: any) => {
           console.log('Realtime event:', payload)
 
           // Call custom event handler

@@ -3,10 +3,8 @@ import {
   createErrorResponse,
   createSuccessResponse,
   getAuthenticatedUser,
-  validateRequest,
   ApiError,
 } from '@/lib/api-utils'
-import { WorkflowActionSchema } from '@/lib/validations/order'
 
 interface RouteParams {
   params: {
@@ -86,7 +84,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
     const { id } = params
-    const { notes } = await validateRequest(request, WorkflowActionSchema)
 
     // Get the order with items
     const { data: order, error: fetchError } = await supabase
@@ -171,9 +168,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Log status change in order history
     await supabase.from('order_status_history').insert({
       order_id: id,
-      status: 'submitted',
+      previous_status: order.status,
+      new_status: 'submitted',
       changed_by: userDetails.id,
-      notes: notes || 'Order submitted for approval',
     })
 
     return createSuccessResponse(updatedOrder, 'Order submitted for approval')
