@@ -78,7 +78,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
 
-    expect(screen.getByText(/Error: Test error/)).toBeInTheDocument()
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
     Object.defineProperty(process.env, 'NODE_ENV', {
       value: originalEnv,

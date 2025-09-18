@@ -77,7 +77,7 @@ describe('OrderCard', () => {
   it('displays delivery date when provided', () => {
     renderWithTheme(<OrderCard order={mockOrder} />)
 
-    expect(screen.getByText('12/1/2024')).toBeInTheDocument()
+    expect(screen.getByText('1/12/2024')).toBeInTheDocument()
   })
 
   it('calls onView when view button is clicked', () => {

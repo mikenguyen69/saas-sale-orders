@@ -11,7 +11,12 @@
       "Bash(npx tsc:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run type-check:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm update:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)",
+      "Bash(timeout 30s npm test src/__tests__/components/ErrorBoundary.test.tsx)"
     ],
     "deny": [],
     "ask": []
