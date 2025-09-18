@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { orderService } from '@/services/orderService'
-import { auth } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Authenticate user
-    const user = await auth(request)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user has warehouse role
-    if (user.role !== 'warehouse') {
-      return NextResponse.json(
-        {
-          error: 'Forbidden. Only warehouse staff can fulfill orders.',
-        },
-        { status: 403 }
-      )
-    }
+    // Authenticate user and require warehouse role
+    const user = await requireAuth(['warehouse'])
 
     const orderId = params.id
 
@@ -26,12 +13,59 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const body = await request.json().catch(() => ({}))
     const { items } = body // Optional: specific items to fulfill
 
-    // Fulfill the order
-    const fulfilledOrder = await orderService.fulfillOrder(orderId, user.id, items)
+    // Update order status to fulfilled
+    const updatedOrder = await prisma.saleOrder.update({
+      where: { id: orderId },
+      data: {
+        status: 'fulfilled',
+        warehouseId: user.id,
+        updatedAt: new Date(),
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+        salesperson: true,
+        manager: true,
+      },
+    })
+
+    // Update order items to fulfilled if specific items provided
+    if (items && Array.isArray(items)) {
+      await prisma.orderItem.updateMany({
+        where: {
+          orderId: orderId,
+          id: { in: items },
+        },
+        data: {
+          lineStatus: 'fulfilled',
+        },
+      })
+    } else {
+      // Fulfill all items
+      await prisma.orderItem.updateMany({
+        where: { orderId: orderId },
+        data: {
+          lineStatus: 'fulfilled',
+        },
+      })
+    }
+
+    // Add to status history
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: orderId,
+        previousStatus: 'approved',
+        newStatus: 'fulfilled',
+        changedBy: user.id,
+      },
+    })
 
     return NextResponse.json({
       message: 'Order fulfilled successfully',
-      order: fulfilledOrder,
+      order: updatedOrder,
     })
   } catch (error) {
     console.error('Fulfill order error:', error)
