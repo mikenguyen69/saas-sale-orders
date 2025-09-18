@@ -18,7 +18,10 @@
       "Bash(npm ls:*)",
       "Bash(timeout 30s npm test src/__tests__/components/ErrorBoundary.test.tsx)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
