@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         salesperson:users!salesperson_id(id, name, email),
         manager:users!manager_id(id, name, email),
         warehouse:users!warehouse_id(id, name, email),
-        items:order_items(
+        order_items(
           id,
           product_id,
           quantity,
@@ -251,18 +251,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Update order details (excluding items for now)
     const orderUpdate = {
-      customer_name: updateData.customerName,
-      contact_person: updateData.contactPerson,
+      customer_name: updateData.customer_name,
+      contact_person: updateData.contact_person,
       email: updateData.email,
-      shipping_address: updateData.shippingAddress,
-      delivery_date: updateData.deliveryDate,
+      shipping_address: updateData.shipping_address,
+      delivery_date: updateData.delivery_date,
       notes: updateData.notes,
     }
 
     // Remove undefined fields
     Object.keys(orderUpdate).forEach(key => {
-      if (orderUpdate[key] === undefined) {
-        delete orderUpdate[key]
+      if ((orderUpdate as any)[key] === undefined) {
+        delete (orderUpdate as any)[key]
       }
     })
 
@@ -295,25 +295,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const { data: product, error: productError } = await supabase
           .from('products')
           .select('id, stock_quantity')
-          .eq('id', item.productId)
+          .eq('id', item.product_id)
           .is('deleted_at', null)
           .single()
 
         if (productError || !product) {
-          throw new ApiError(400, `Product ${item.productId} not found`)
+          throw new ApiError(400, `Product ${item.product_id} not found`)
         }
 
-        const lineTotal = item.quantity * item.unitPrice
+        const lineTotal = item.quantity * item.unit_price
         const isInStock = product.stock_quantity >= item.quantity
 
         itemsToInsert.push({
           order_id: id,
-          product_id: item.productId,
+          product_id: item.product_id,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
+          unit_price: item.unit_price,
           line_total: lineTotal,
           is_in_stock: isInStock,
-          line_status: 'pending',
+          line_status: 'pending' as const,
         })
       }
 
@@ -328,7 +328,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         throw new Error(`Database error: ${itemsError.message}`)
       }
 
-      updatedOrder.items = items
+      ;(updatedOrder as any).order_items = items
     } else {
       // Get existing items
       const { data: items } = await supabase
@@ -341,7 +341,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         )
         .eq('order_id', id)
 
-      updatedOrder.items = items || []
+      ;(updatedOrder as any).order_items = items || []
     }
 
     return createSuccessResponse(updatedOrder, 'Order updated successfully')

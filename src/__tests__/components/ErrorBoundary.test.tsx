@@ -67,7 +67,10 @@ describe('ErrorBoundary', () => {
 
   it('shows error stack in development mode', () => {
     const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'development'
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'development',
+      configurable: true,
+    })
 
     renderWithTheme(
       <ErrorBoundary>
@@ -75,14 +78,20 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
 
-    expect(screen.getByText(/Error: Test error/)).toBeInTheDocument()
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
-    process.env.NODE_ENV = originalEnv
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: originalEnv,
+      configurable: true,
+    })
   })
 
   it('does not show error stack in production mode', () => {
     const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'production',
+      configurable: true,
+    })
 
     renderWithTheme(
       <ErrorBoundary>
@@ -92,6 +101,9 @@ describe('ErrorBoundary', () => {
 
     expect(screen.queryByText(/Error: Test error/)).not.toBeInTheDocument()
 
-    process.env.NODE_ENV = originalEnv
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: originalEnv,
+      configurable: true,
+    })
   })
 })

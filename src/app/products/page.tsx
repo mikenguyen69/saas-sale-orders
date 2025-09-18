@@ -213,12 +213,10 @@ export default function ProductsPage() {
           loading={isLoading}
           paginationMode="server"
           rowCount={data?.pagination.total || 0}
-          page={page - 1} // DataGrid uses 0-based indexing
-          pageSize={itemsPerPage}
-          onPageChange={newPage => setPage(newPage + 1)} // Convert back to 1-based
-          onPageSizeChange={newPageSize => {
-            setItemsPerPage(newPageSize)
-            setPage(1)
+          paginationModel={{ page: page - 1, pageSize: itemsPerPage }}
+          onPaginationModelChange={(newModel: any) => {
+            setPage(newModel.page + 1)
+            setItemsPerPage(newModel.pageSize)
           }}
           pageSizeOptions={ITEMS_PER_PAGE_OPTIONS}
           disableRowSelectionOnClick

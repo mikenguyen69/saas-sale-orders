@@ -2,11 +2,37 @@ import React from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider, createTheme } from '@mui/material'
+import type { AuthState } from '@/hooks/useAuth'
 
 const theme = createTheme()
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
+  authState?: Partial<AuthState>
+}
+
+// Mock AuthProvider for testing
+const MockAuthContext = React.createContext<AuthState | undefined>(undefined)
+
+export function MockAuthProvider({
+  children,
+  authState = {},
+}: {
+  children: React.ReactNode
+  authState?: Partial<AuthState>
+}) {
+  const defaultAuthState: AuthState = {
+    user: null,
+    session: null,
+    loading: false,
+    signIn: jest.fn().mockResolvedValue({}),
+    signUp: jest.fn().mockResolvedValue({}),
+    signOut: jest.fn().mockResolvedValue(undefined),
+    getAccessToken: jest.fn().mockReturnValue(null),
+    ...authState,
+  }
+
+  return <MockAuthContext.Provider value={defaultAuthState}>{children}</MockAuthContext.Provider>
 }
 
 export function createTestQueryClient() {
@@ -14,7 +40,7 @@ export function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false,
-        cacheTime: 0,
+        gcTime: 0,
       },
       mutations: {
         retry: false,
@@ -25,12 +51,18 @@ export function createTestQueryClient() {
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  { queryClient = createTestQueryClient(), ...renderOptions }: CustomRenderOptions = {}
+  {
+    queryClient = createTestQueryClient(),
+    authState = {},
+    ...renderOptions
+  }: CustomRenderOptions = {}
 ) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <MockAuthProvider authState={authState}>{children}</MockAuthProvider>
+        </QueryClientProvider>
       </ThemeProvider>
     )
   }

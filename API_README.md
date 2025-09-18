@@ -20,13 +20,13 @@ Authorization: Bearer <your-jwt-token>
 
 ### User Management
 
-| Method | Endpoint | Description | Required Role |
-|--------|----------|-------------|---------------|
-| GET | `/api/v1/users` | List all users (paginated) | Manager |
-| POST | `/api/v1/users` | Create a new user | Manager |
-| GET | `/api/v1/users/{id}` | Get user by ID | Own profile or Manager |
-| PUT | `/api/v1/users/{id}` | Update user | Own profile or Manager |
-| DELETE | `/api/v1/users/{id}` | Soft delete user | Manager |
+| Method | Endpoint             | Description                | Required Role          |
+| ------ | -------------------- | -------------------------- | ---------------------- |
+| GET    | `/api/v1/users`      | List all users (paginated) | Manager                |
+| POST   | `/api/v1/users`      | Create a new user          | Manager                |
+| GET    | `/api/v1/users/{id}` | Get user by ID             | Own profile or Manager |
+| PUT    | `/api/v1/users/{id}` | Update user                | Own profile or Manager |
+| DELETE | `/api/v1/users/{id}` | Soft delete user           | Manager                |
 
 ### Query Parameters for GET /api/v1/users
 
@@ -115,7 +115,9 @@ Authorization: Bearer <your-jwt-token>
 ```json
 {
   "success": true,
-  "data": { /* resource object */ },
+  "data": {
+    /* resource object */
+  },
   "message": "Optional success message"
 }
 ```
@@ -125,7 +127,9 @@ Authorization: Bearer <your-jwt-token>
 ```json
 {
   "success": true,
-  "data": [ /* array of resources */ ],
+  "data": [
+    /* array of resources */
+  ],
   "pagination": {
     "page": 1,
     "limit": 20,
@@ -148,11 +152,13 @@ npm test -- --testPathPattern=validation.test.ts
 ## Development
 
 1. Start the development server:
+
    ```bash
    npm run dev
    ```
 
 2. Start local Supabase:
+
    ```bash
    npm run db:start
    ```
@@ -180,6 +186,7 @@ npm test -- --testPathPattern=validation.test.ts
 ### Phase 3: API Development ✅ COMPLETED
 
 #### User Management (1 day) ✅
+
 - ✅ `/api/v1/users` CRUD endpoints
 - ✅ Role-based access control
 - ✅ Input validation with Zod
@@ -188,16 +195,19 @@ npm test -- --testPathPattern=validation.test.ts
 - ✅ Unit tests
 
 #### Next: Product Management (1 day)
+
 - `/api/v1/products` endpoints
 - Stock management integration
 - Category filtering
 
 #### Next: Order Management (2 days)
+
 - `/api/v1/orders` endpoints
 - Workflow state management
 - Line item handling
 
 #### Next: Workflow Actions (2 days)
+
 - Order submission/approval/fulfillment endpoints
 - Stock validation integration
 - Status history tracking

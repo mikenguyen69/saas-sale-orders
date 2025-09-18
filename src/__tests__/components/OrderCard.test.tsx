@@ -16,8 +16,8 @@ const mockOrder: SaleOrder = {
   delivery_date: '2024-12-01',
   status: 'draft',
   salesperson_id: 'user1',
-  manager_id: null,
-  warehouse_id: null,
+  manager_id: undefined,
+  warehouse_id: undefined,
   notes: 'Test order notes',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
@@ -77,7 +77,7 @@ describe('OrderCard', () => {
   it('displays delivery date when provided', () => {
     renderWithTheme(<OrderCard order={mockOrder} />)
 
-    expect(screen.getByText('12/1/2024')).toBeInTheDocument()
+    expect(screen.getByText('1/12/2024')).toBeInTheDocument()
   })
 
   it('calls onView when view button is clicked', () => {

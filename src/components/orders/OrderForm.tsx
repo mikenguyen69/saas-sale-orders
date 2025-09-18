@@ -48,8 +48,10 @@ interface OrderFormProps {
 
 export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const [orderItems, setOrderItems] = useState<OrderItemRow[]>(() => {
-    if (order?.order_items) {
-      return order.order_items.map(item => ({
+    // Handle both 'order_items' and 'items' properties for compatibility
+    const items = order?.order_items || (order as any)?.items
+    if (items && Array.isArray(items)) {
+      return items.map(item => ({
         ...item,
         tempId: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
       }))
@@ -205,7 +207,9 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     }
 
     // Update the orderItems state
-    setOrderItems(items => items.map(item => (item.tempId === newRow.tempId ? updatedRow : item)))
+    setOrderItems(items =>
+      items.map(item => (item.tempId === newRow.tempId ? (updatedRow as OrderItemRow) : item))
+    )
 
     return updatedRow
   }, [])
@@ -214,6 +218,9 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     try {
       const orderData = {
         ...data,
+        notes: data.notes || '',
+        shipping_address: data.shipping_address || '',
+        delivery_date: data.delivery_date || '',
         order_items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,
@@ -245,6 +252,9 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
       const data = watch()
       const orderData = {
         ...data,
+        notes: data.notes || '',
+        shipping_address: data.shipping_address || '',
+        delivery_date: data.delivery_date || '',
         order_items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,

@@ -54,16 +54,7 @@ export function useFileUpload() {
         )
 
         // Upload file
-        const { data, error } = await supabase.storage.from(bucket).upload(filePath, file, {
-          onUploadProgress: progress => {
-            const percentage = (progress.loaded / progress.total) * 100
-            setUploads(prev =>
-              prev.map(upload =>
-                upload.file === file ? { ...upload, progress: Math.round(percentage) } : upload
-              )
-            )
-          },
-        })
+        const { data, error } = await supabase.storage.from(bucket).upload(filePath, file)
 
         if (error) {
           throw error

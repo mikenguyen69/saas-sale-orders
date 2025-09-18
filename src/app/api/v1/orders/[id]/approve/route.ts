@@ -4,10 +4,8 @@ import {
   createSuccessResponse,
   getAuthenticatedUser,
   requireRole,
-  validateRequest,
   ApiError,
 } from '@/lib/api-utils'
-import { WorkflowActionSchema } from '@/lib/validations/order'
 
 interface RouteParams {
   params: {
@@ -87,7 +85,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
     const { id } = params
-    const { notes } = await validateRequest(request, WorkflowActionSchema)
 
     // Only managers can approve orders
     requireRole(userDetails.role, ['manager'])
@@ -172,9 +169,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Log status change in order history
     await supabase.from('order_status_history').insert({
       order_id: id,
-      status: 'approved',
+      previous_status: order.status,
+      new_status: 'approved',
       changed_by: userDetails.id,
-      notes: notes || 'Order approved by manager',
     })
 
     return createSuccessResponse(updatedOrder, 'Order approved successfully')

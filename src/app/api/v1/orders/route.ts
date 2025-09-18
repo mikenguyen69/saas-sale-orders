@@ -131,22 +131,24 @@ export async function GET(request: NextRequest) {
       queryBuilder = queryBuilder.eq('status', query.status)
     }
 
-    if (query.salespersonId) {
+    if (query.salesperson_id) {
       // Only managers can filter by other salespeople
       if (userDetails.role !== 'manager') {
         throw new ApiError(403, 'Access denied')
       }
-      queryBuilder = queryBuilder.eq('salesperson_id', query.salespersonId)
+      queryBuilder = queryBuilder.eq('salesperson_id', query.salesperson_id)
     }
 
-    if (query.customerId) {
-      queryBuilder = queryBuilder.ilike('customer_name', `%${query.customerId}%`)
+    if (query.customer_id) {
+      queryBuilder = queryBuilder.ilike('customer_name', `%${query.customer_id}%`)
     }
 
     // Apply pagination
-    const offset = (query.page - 1) * query.limit
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+    const offset = (page - 1) * limit
     queryBuilder = queryBuilder
-      .range(offset, offset + query.limit - 1)
+      .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false })
 
     const { data: orders, error, count } = await queryBuilder
@@ -160,7 +162,7 @@ export async function GET(request: NextRequest) {
         page: query.page,
         limit: query.limit,
         status: query.status,
-        salesperson_id: query.salespersonId,
+        salesperson_id: query.salesperson_id,
       },
     })
 
@@ -169,7 +171,7 @@ export async function GET(request: NextRequest) {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    return createPaginatedResponse(orders || [], query.page, query.limit, count || 0)
+    return createPaginatedResponse(orders || [], page, limit, count || 0)
   } catch (error) {
     return createErrorResponse(error)
   }
@@ -273,11 +275,11 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('sale_orders')
       .insert({
-        customer_name: orderData.customerName,
-        contact_person: orderData.contactPerson,
+        customer_name: orderData.customer_name,
+        contact_person: orderData.contact_person,
         email: orderData.email,
-        shipping_address: orderData.shippingAddress,
-        delivery_date: orderData.deliveryDate,
+        shipping_address: orderData.shipping_address,
+        delivery_date: orderData.delivery_date,
         notes: orderData.notes,
         status: 'draft',
         salesperson_id: userDetails.id,
@@ -295,25 +297,25 @@ export async function POST(request: NextRequest) {
       const { data: product, error: productError } = await supabase
         .from('products')
         .select('id, stock_quantity')
-        .eq('id', item.productId)
+        .eq('id', item.product_id)
         .is('deleted_at', null)
         .single()
 
       if (productError || !product) {
-        throw new ApiError(400, `Product ${item.productId} not found`)
+        throw new ApiError(400, `Product ${item.product_id} not found`)
       }
 
-      const lineTotal = item.quantity * item.unitPrice
+      const lineTotal = item.quantity * item.unit_price
       const isInStock = product.stock_quantity >= item.quantity
 
       itemsToInsert.push({
         order_id: order.id,
-        product_id: item.productId,
+        product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.unitPrice,
+        unit_price: item.unit_price,
         line_total: lineTotal,
         is_in_stock: isInStock,
-        line_status: 'pending',
+        line_status: 'pending' as const,
       })
     }
 
