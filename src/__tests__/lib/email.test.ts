@@ -53,7 +53,7 @@ describe('EmailService', () => {
     }
 
     beforeEach(() => {
-      mockSgMail.send.mockResolvedValue([mockResponse as any, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
     })
 
     it('should send email successfully', async () => {
@@ -242,7 +242,7 @@ describe('EmailService', () => {
         statusCode: 202,
         headers: { 'x-message-id': 'test-id' },
       }
-      mockSgMail.send.mockResolvedValue([mockResponse as any, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
     })
 
     it('should send test email with correct content', async () => {
@@ -260,9 +260,7 @@ describe('EmailService', () => {
     })
 
     it('should include timestamp in test email', async () => {
-      const beforeTime = new Date().toISOString()
       await service.sendTestEmail('test@example.com')
-      const afterTime = new Date().toISOString()
 
       const callArgs = mockSgMail.send.mock.calls[0][0]
       expect(callArgs.html).toMatch(/Timestamp: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
@@ -293,7 +291,9 @@ describe('EmailService', () => {
       const result = await service.validateConfiguration()
 
       expect(result.isValid).toBe(false)
-      expect(result.errors).toContain('SENDGRID_FROM_EMAIL environment variable is missing (using default)')
+      expect(result.errors).toContain(
+        'SENDGRID_FROM_EMAIL environment variable is missing (using default)'
+      )
     })
 
     it('should return multiple errors when multiple variables are missing', async () => {
@@ -305,7 +305,9 @@ describe('EmailService', () => {
       expect(result.isValid).toBe(false)
       expect(result.errors).toHaveLength(2)
       expect(result.errors).toContain('SENDGRID_API_KEY environment variable is missing')
-      expect(result.errors).toContain('SENDGRID_FROM_EMAIL environment variable is missing (using default)')
+      expect(result.errors).toContain(
+        'SENDGRID_FROM_EMAIL environment variable is missing (using default)'
+      )
     })
   })
 
@@ -328,7 +330,7 @@ describe('EmailService', () => {
         statusCode: 202,
         headers: { 'x-message-id': 'test-id' },
       }
-      mockSgMail.send.mockResolvedValue([mockResponse as any, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
     })
 
     afterEach(() => {
@@ -354,7 +356,9 @@ describe('EmailService', () => {
         html: '<p>Test</p>',
       })
 
-      expect(consoleSpy).toHaveBeenCalledWith('[EmailService] Sending email to: test1@example.com, test2@example.com')
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[EmailService] Sending email to: test1@example.com, test2@example.com'
+      )
     })
   })
 })

@@ -67,7 +67,9 @@ export class EmailService {
         attachments: options.attachments,
       }
 
-      console.log(`[EmailService] Sending email to: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`)
+      console.log(
+        `[EmailService] Sending email to: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`
+      )
       console.log(`[EmailService] Subject: ${options.subject}`)
 
       const [response] = await sgMail.send(emailData)
@@ -87,7 +89,7 @@ export class EmailService {
       } else if (typeof error === 'string') {
         errorMessage = error
       } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = (error as any).message
+        errorMessage = (error as { message: string }).message
       }
 
       return {
