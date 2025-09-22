@@ -57,9 +57,11 @@ export function useAuth(): AuthState {
             error.status === 403
           ) {
             console.warn('Session expired or invalid, clearing auth state')
-            await supabase.auth.signOut({ scope: 'local' })
+            // Only call signOut for actual auth failures, not network errors
             setUser(null)
             setSession(null)
+            // Don't call signOut here as it can trigger unwanted auth events
+            // Just clear the local state
           } else {
             // For network errors or other issues, try to preserve existing session
             console.warn(
@@ -132,14 +134,8 @@ export function useAuth(): AuthState {
         // Only clear auth state if we couldn't preserve a valid session
         setUser(null)
         setSession(null)
-        // Only sign out for actual auth errors, not network issues
-        if (!(error instanceof Error && error.message === 'Auth check timeout')) {
-          try {
-            await supabase.auth.signOut({ scope: 'local' })
-          } catch (signOutError) {
-            console.warn('Failed to clear auth state:', signOutError)
-          }
-        }
+        // Don't call signOut here - it can cause unwanted auth state changes
+        // during network errors or timeouts. Let the session expire naturally.
       } finally {
         // CRITICAL: Always clear loading state
         setLoading(false)
@@ -276,13 +272,11 @@ export function useAuth(): AuthState {
     if (session && session.expires_at) {
       const now = Math.floor(Date.now() / 1000)
       if (now >= session.expires_at) {
-        console.warn('Session expired, clearing auth state and triggering re-auth')
+        console.warn('Session expired, clearing auth state')
         setUser(null)
         setSession(null)
-        // Trigger a re-auth check
-        supabase.auth
-          .signOut({ scope: 'local' })
-          .catch(err => console.warn('Failed to clear expired session:', err))
+        // Don't call signOut here - just clear local state
+        // The expired session will be handled naturally by Supabase
         return null
       }
     }
