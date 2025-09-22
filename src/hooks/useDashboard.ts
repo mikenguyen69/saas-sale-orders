@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useApiCall } from './useApiCall'
+import { SaleOrder, Product } from '../types'
 
 export interface DashboardStats {
   totalOrders: number
@@ -41,8 +42,10 @@ export function useRecentOrders() {
   return useQuery({
     queryKey: ['recent-orders'],
     queryFn: async () => {
-      const response = await callApi<any>('/api/v1/orders?limit=5&sort=created_at&order=desc')
-      return response.data || []
+      const response = await callApi<SaleOrder[]>(
+        '/api/v1/orders?limit=5&sort=created_at&order=desc'
+      )
+      return response || []
     },
     staleTime: 1 * 60 * 1000, // 1 minute
   })
@@ -54,8 +57,8 @@ export function useLowStockProducts() {
   return useQuery({
     queryKey: ['low-stock-products'],
     queryFn: async () => {
-      const response = await callApi<any>('/api/v1/products?lowStock=true&limit=5')
-      return response.data || []
+      const response = await callApi<Product[]>('/api/v1/products?lowStock=true&limit=5')
+      return response || []
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   })

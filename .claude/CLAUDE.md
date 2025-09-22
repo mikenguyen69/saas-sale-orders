@@ -5,6 +5,7 @@
 **SaaS Sale Orders** is a comprehensive multi-tenant B2B sales order management platform. The application provides complete order lifecycle management from creation to fulfillment with enterprise-grade security, role-based access control, real-time updates, and automated workflows.
 
 ## Multi-Tenancy Model
+
 - **Pattern**: Shared application with tenant-isolated data via PostgreSQL Row Level Security
 - **Isolation**: Tenant context validation in all database operations
 - **Authentication**: Supabase Auth with tenant-scoped JWT tokens
@@ -13,6 +14,7 @@
 ## SaaS-Specific Guidelines
 
 ### Coding Standards
+
 - TypeScript strict mode with comprehensive type safety
 - All database queries MUST include tenant context validation
 - API responses use consistent `Result<T, E>` pattern for error handling
@@ -20,6 +22,7 @@
 - Unit tests required for all business logic with tenant isolation tests
 
 ### Security Requirements
+
 - Never expose tenant data across organizational boundaries
 - Implement proper RBAC for admin and user functions
 - Encrypt sensitive data at rest and in transit
@@ -27,6 +30,7 @@
 - Compliance with SOC2, GDPR data protection requirements
 
 ### Performance Standards
+
 - Monitor per-tenant resource usage and API performance
 - Implement efficient caching strategies with tenant isolation
 - Use connection pooling for database operations
@@ -36,6 +40,7 @@
 ## Architecture & Technical Stack
 
 ### Core Technologies
+
 - **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript 5.6 (strict mode)
 - **Database**: PostgreSQL via Supabase with Row Level Security
@@ -47,6 +52,7 @@
 - **Code Quality**: ESLint + Prettier + Husky
 
 ### SaaS Infrastructure
+
 - **Multi-tenancy**: Row Level Security (RLS) policies
 - **File Storage**: Supabase Storage with tenant isolation
 - **Real-time**: Supabase Realtime with tenant filtering
@@ -57,6 +63,7 @@
 ## Commands Reference
 
 ### Development Workflow
+
 - `npm run dev`: Start development server with hot reload
 - `npm run build`: Production build with Prisma generation
 - `npm run start`: Production server
@@ -65,6 +72,7 @@
 - `npm run test:coverage`: Generate test coverage report
 
 ### Database Operations
+
 - `npm run db:start`: Start local Supabase instance
 - `npm run db:stop`: Stop local Supabase instance
 - `npm run db:reset`: Reset development database with seed data
@@ -72,6 +80,7 @@
 - `npx prisma db push`: Push schema changes to database
 
 ### Code Quality
+
 - `npm run lint`: ESLint with TypeScript strict mode
 - `npm run lint:fix`: Auto-fix ESLint issues
 - `npm run type-check`: TypeScript compilation check
@@ -79,6 +88,7 @@
 - `npm run format:check`: Check code formatting compliance
 
 ### Security & Audit
+
 - `npm audit`: Check for security vulnerabilities
 - Validate all API endpoints have proper tenant context
 - Review database queries for tenant isolation
@@ -87,6 +97,7 @@
 ## Business Logic Patterns
 
 ### Tenant-Aware Data Access
+
 ```typescript
 // ALWAYS use tenant context in database operations
 const getOrdersForTenant = async (tenantId: string, userId: string) => {
@@ -95,37 +106,40 @@ const getOrdersForTenant = async (tenantId: string, userId: string) => {
       AND: [
         { salespersonId: userId },
         // Tenant context automatically enforced by RLS
-      ]
-    }
-  });
-};
+      ],
+    },
+  })
+}
 ```
 
 ### API Route Security
+
 ```typescript
 // All API routes must validate tenant context
 export async function GET(request: Request) {
-  const { user, tenant } = await validateAuth(request);
+  const { user, tenant } = await validateAuth(request)
   if (!tenant) {
-    return NextResponse.json({ error: 'Tenant context required' }, { status: 400 });
+    return NextResponse.json({ error: 'Tenant context required' }, { status: 400 })
   }
   // Proceed with tenant-aware operations
 }
 ```
 
 ### Role-Based Access Control
+
 ```typescript
 // Implement granular permissions per tenant
 const hasPermission = (user: User, action: string, resource: string): boolean => {
-  const userRole = user.role;
-  const permissions = getRolePermissions(userRole);
-  return permissions.includes(`${action}:${resource}`);
-};
+  const userRole = user.role
+  const permissions = getRolePermissions(userRole)
+  return permissions.includes(`${action}:${resource}`)
+}
 ```
 
 ## Order Workflow
 
 ### Multi-Status Process
+
 1. **Draft Creation**: Salesperson creates order with product selection
 2. **Stock Validation**: Real-time inventory checks with tenant isolation
 3. **Submission**: Order submitted for manager approval within tenant
@@ -134,6 +148,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 6. **Completion**: Order marked as fulfilled with status history
 
 ### Tenant Isolation Points
+
 - All queries filter by tenant context automatically via RLS
 - File uploads stored in tenant-specific Storage buckets
 - Real-time subscriptions scoped to tenant data
@@ -143,6 +158,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 ## File Structure Navigation
 
 ### Core Directories
+
 - `/src/app/api/v1/`: Tenant-aware API endpoint definitions
 - `/src/components/`: Reusable UI components with tenant context
 - `/src/lib/`: Utility libraries (Supabase, Prisma, Auth with tenant support)
@@ -151,6 +167,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - `/src/utils/`: Helper functions for tenant operations
 
 ### Critical Files
+
 - `/src/lib/auth.ts`: Authentication with tenant context extraction
 - `/src/lib/prisma.ts`: Database client with tenant-aware configurations
 - `/src/middleware.ts`: Request middleware for tenant validation
@@ -160,6 +177,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 ## Anti-Patterns (DO NOT)
 
 ### Security Anti-Patterns
+
 - Never query across tenant boundaries without explicit admin context
 - Don't store tenant secrets in application code or environment variables
 - Avoid shared caching without proper tenant isolation
@@ -167,6 +185,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - Don't bypass tenant validation for "convenience" or testing
 
 ### Performance Anti-Patterns
+
 - Don't implement N+1 queries in tenant operations
 - Avoid synchronous operations that could block other tenants
 - Don't use shared rate limiting across tenants
@@ -174,6 +193,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - Avoid loading unnecessary data across tenant boundaries
 
 ### Architecture Anti-Patterns
+
 - Don't hardcode tenant-specific logic in shared components
 - Avoid tight coupling between tenant management and business logic
 - Don't implement custom authentication without security review
@@ -181,6 +201,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - Don't create tenant-specific API endpoints (use tenant context instead)
 
 ## Compliance & Security Notes
+
 - All tenant data encrypted at rest via Supabase encryption
 - Audit logging implemented for all tenant data access
 - Regular security scanning via GitHub Actions
@@ -189,6 +210,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - Row Level Security policies enforce tenant isolation at database level
 
 ## Scaling Considerations
+
 - Supabase handles database scaling automatically
 - Connection pooling via Prisma for efficient resource usage
 - CDN integration via Vercel for global performance
@@ -196,6 +218,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - File storage partitioned by tenant for optimal performance
 
 ## Development Workflow
+
 1. Create feature branch from main
 2. Implement with tenant isolation in mind
 3. Write comprehensive tests including tenant boundary tests
@@ -204,6 +227,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 6. Deploy via CI/CD pipeline with automated testing
 
 ## Documentation References
+
 - **Database Schema**: `/prisma/schema.prisma` - Complete data model
 - **API Documentation**: Auto-generated Swagger at `/api/docs`
 - **Authentication Flow**: `/src/lib/auth.ts` - Tenant-aware auth
@@ -211,6 +235,7 @@ const hasPermission = (user: User, action: string, resource: string): boolean =>
 - **Multi-tenancy Guide**: This file - Comprehensive tenant patterns
 
 ## MCP Integration
+
 - **JIRA Connectivity**: Automated ticket management via MCP server
 - **Project Tracking**: CCS project integration for development workflow
 - **Security Reviews**: Automated security validation in Claude Code

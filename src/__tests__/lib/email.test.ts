@@ -1,4 +1,5 @@
 import { EmailService, emailService, sgMail } from '@/lib/email'
+import type { ClientResponse } from '@sendgrid/mail'
 
 // Mock SendGrid
 jest.mock('@sendgrid/mail')
@@ -53,7 +54,7 @@ describe('EmailService', () => {
     }
 
     beforeEach(() => {
-      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as ClientResponse, {}])
     })
 
     it('should send email successfully', async () => {
@@ -242,7 +243,7 @@ describe('EmailService', () => {
         statusCode: 202,
         headers: { 'x-message-id': 'test-id' },
       }
-      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as ClientResponse, {}])
     })
 
     it('should send test email with correct content', async () => {
@@ -262,7 +263,7 @@ describe('EmailService', () => {
     it('should include timestamp in test email', async () => {
       await service.sendTestEmail('test@example.com')
 
-      const callArgs = mockSgMail.send.mock.calls[0][0]
+      const callArgs = mockSgMail.send.mock.calls[0][0] as any
       expect(callArgs.html).toMatch(/Timestamp: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
       expect(callArgs.text).toMatch(/Timestamp: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     })
@@ -330,7 +331,7 @@ describe('EmailService', () => {
         statusCode: 202,
         headers: { 'x-message-id': 'test-id' },
       }
-      mockSgMail.send.mockResolvedValue([mockResponse as unknown, {}])
+      mockSgMail.send.mockResolvedValue([mockResponse as ClientResponse, {}])
     })
 
     afterEach(() => {

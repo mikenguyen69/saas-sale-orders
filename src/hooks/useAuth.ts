@@ -31,13 +31,61 @@ export function useAuth(): AuthState {
       try {
         setLoading(true)
 
+        // Add timeout to prevent hanging auth checks
+        const authPromise = supabase.auth.getUser()
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Auth check timeout')), 10000)
+        )
+
         // Always use getUser() for secure authentication verification
         const {
           data: { user },
           error,
-        } = await supabase.auth.getUser()
+        } = (await Promise.race([authPromise, timeoutPromise])) as {
+          data: { user: User | null }
+          error: { message: string; status?: number } | null
+        }
 
-        if (error || !user) {
+        if (error) {
+          console.warn('Auth check failed:', error.message)
+          // Only clear auth state for actual authentication errors, not network issues
+          if (
+            error.message.includes('Invalid JWT') ||
+            error.message.includes('expired') ||
+            error.message.includes('invalid') ||
+            error.status === 401 ||
+            error.status === 403
+          ) {
+            console.warn('Session expired or invalid, clearing auth state')
+            // Only call signOut for actual auth failures, not network errors
+            setUser(null)
+            setSession(null)
+            // Don't call signOut here as it can trigger unwanted auth events
+            // Just clear the local state
+          } else {
+            // For network errors or other issues, try to preserve existing session
+            console.warn(
+              'Network or temporary error during auth check, preserving existing session if valid'
+            )
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            if (session && session.access_token) {
+              // Check if the existing session is still valid
+              const now = Math.floor(Date.now() / 1000)
+              if (!session.expires_at || now < session.expires_at) {
+                console.log('Preserving valid existing session')
+                setSession(session)
+                // Don't set user yet, wait for successful verification
+                return
+              }
+            }
+            // If no valid session exists, clear the state
+            setUser(null)
+            setSession(null)
+          }
+        } else if (!user) {
+          console.warn('No user found, clearing auth state')
           setUser(null)
           setSession(null)
         } else {
@@ -50,9 +98,46 @@ export function useAuth(): AuthState {
         }
       } catch (error) {
         console.error('Auth check error:', error)
+        // Handle timeout or network errors - try to preserve valid sessions
+        if (error instanceof Error && error.message === 'Auth check timeout') {
+          console.warn('Authentication check timed out, checking for existing valid session')
+        }
+
+        // Try to preserve existing session if it's still valid
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+          if (session && session.access_token) {
+            const now = Math.floor(Date.now() / 1000)
+            if (!session.expires_at || now < session.expires_at) {
+              console.log('Preserving valid session after auth check error')
+              setSession(session)
+              // Try to get user info if we have a valid session
+              try {
+                const {
+                  data: { user },
+                } = await supabase.auth.getUser()
+                if (user) {
+                  setUser(user)
+                  return // Successfully preserved session and user
+                }
+              } catch (userError) {
+                console.warn('Could not verify user with preserved session:', userError)
+              }
+            }
+          }
+        } catch (sessionError) {
+          console.warn('Could not check existing session:', sessionError)
+        }
+
+        // Only clear auth state if we couldn't preserve a valid session
         setUser(null)
         setSession(null)
+        // Don't call signOut here - it can cause unwanted auth state changes
+        // during network errors or timeouts. Let the session expire naturally.
       } finally {
+        // CRITICAL: Always clear loading state
         setLoading(false)
       }
     }
@@ -65,25 +150,53 @@ export function useAuth(): AuthState {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event)
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Always verify user authenticity on auth events
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser()
-        if (!error && user) {
-          setUser(user)
-          setSession(session)
-        } else {
+      try {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Always verify user authenticity on auth events
+          const {
+            data: { user },
+            error,
+          } = await supabase.auth.getUser()
+          if (!error && user) {
+            setUser(user)
+            setSession(session)
+          } else {
+            console.warn('Auth verification failed on', event, error?.message)
+            // Only clear auth state if this is an actual auth failure, not network issue
+            if (
+              error &&
+              (error.status === 401 ||
+                error.status === 403 ||
+                error.message.includes('Invalid JWT'))
+            ) {
+              setUser(null)
+              setSession(null)
+            } else {
+              // For network errors, preserve the session if it was provided
+              if (session && session.access_token) {
+                console.log('Preserving session despite verification error')
+                setSession(session)
+              }
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setSession(null)
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setSession(null)
+      } catch (error) {
+        console.error('Auth state change error:', error)
+        // Don't automatically clear auth state on network errors during auth events
+        // Only clear if we know it's an auth failure
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setSession(null)
+        } else {
+          console.warn('Preserving auth state due to network error during auth event')
+        }
+      } finally {
+        // CRITICAL: Always clear loading state on auth events
+        setLoading(false)
       }
-
-      setLoading(false)
     })
 
     return () => {
@@ -162,6 +275,8 @@ export function useAuth(): AuthState {
         console.warn('Session expired, clearing auth state')
         setUser(null)
         setSession(null)
+        // Don't call signOut here - just clear local state
+        // The expired session will be handled naturally by Supabase
         return null
       }
     }

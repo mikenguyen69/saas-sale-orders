@@ -30,31 +30,34 @@ export function useAppState() {
     setState(prev => ({ ...prev, error }))
   }, [])
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-    const newNotification: Notification = { ...notification, id }
-
-    setState(prev => ({
-      ...prev,
-      notifications: [...prev.notifications, newNotification],
-    }))
-
-    // Auto-remove notification if autoHide is true
-    if (notification.autoHide !== false) {
-      setTimeout(() => {
-        removeNotification(id)
-      }, 5000)
-    }
-
-    return id
-  }, [])
-
   const removeNotification = useCallback((id: string) => {
     setState(prev => ({
       ...prev,
       notifications: prev.notifications.filter(n => n.id !== id),
     }))
   }, [])
+
+  const addNotification = useCallback(
+    (notification: Omit<Notification, 'id'>) => {
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      const newNotification: Notification = { ...notification, id }
+
+      setState(prev => ({
+        ...prev,
+        notifications: [...prev.notifications, newNotification],
+      }))
+
+      // Auto-remove notification if autoHide is true
+      if (notification.autoHide !== false) {
+        setTimeout(() => {
+          removeNotification(id)
+        }, 5000)
+      }
+
+      return id
+    },
+    [removeNotification]
+  )
 
   const clearAllNotifications = useCallback(() => {
     setState(prev => ({ ...prev, notifications: [] }))
