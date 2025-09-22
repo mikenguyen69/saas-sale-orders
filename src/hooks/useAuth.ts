@@ -128,7 +128,10 @@ export function useAuth(): AuthState {
                   return // Successfully preserved session and user
                 }
               } catch (userError) {
-                console.warn('Could not verify user with preserved session (timeout or error):', userError)
+                console.warn(
+                  'Could not verify user with preserved session (timeout or error):',
+                  userError
+                )
                 // Don't clear the session, just proceed without user verification
                 // The session is still valid, user verification just failed
               }
