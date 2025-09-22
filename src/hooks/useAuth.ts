@@ -41,12 +41,19 @@ export function useAuth(): AuthState {
         const {
           data: { user },
           error,
-        } = await Promise.race([authPromise, timeoutPromise]) as any
+        } = (await Promise.race([authPromise, timeoutPromise])) as {
+          data: { user: User | null }
+          error: { message: string; status?: number } | null
+        }
 
         if (error) {
           console.warn('Auth check failed:', error.message)
           // Handle specific authentication errors
-          if (error.message.includes('Invalid JWT') || error.message.includes('expired') || error.status === 401) {
+          if (
+            error.message.includes('Invalid JWT') ||
+            error.message.includes('expired') ||
+            error.status === 401
+          ) {
             console.warn('Session expired or invalid, clearing auth state')
             await supabase.auth.signOut({ scope: 'local' })
           }
@@ -198,9 +205,9 @@ export function useAuth(): AuthState {
         setUser(null)
         setSession(null)
         // Trigger a re-auth check
-        supabase.auth.signOut({ scope: 'local' }).catch(err =>
-          console.warn('Failed to clear expired session:', err)
-        )
+        supabase.auth
+          .signOut({ scope: 'local' })
+          .catch(err => console.warn('Failed to clear expired session:', err))
         return null
       }
     }
