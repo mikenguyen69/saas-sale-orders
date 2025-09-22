@@ -9,6 +9,7 @@ export interface ApiCallOptions {
   showErrorNotification?: boolean
   showSuccessNotification?: boolean
   successMessage?: string
+  timeoutMs?: number
 }
 
 export function useApiCall() {
@@ -28,6 +29,7 @@ export function useApiCall() {
         showErrorNotification = true,
         showSuccessNotification = false,
         successMessage = 'Operation completed successfully',
+        timeoutMs = 30000, // 30 second default timeout
       } = callOptions
 
       try {
@@ -39,8 +41,14 @@ export function useApiCall() {
         }
 
         const token = getAccessToken()
+
+        // Create AbortController for timeout handling
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
         const response = await fetch(url, {
           ...options,
+          signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
             ...(token && { Authorization: `Bearer ${token}` }),
@@ -48,10 +56,28 @@ export function useApiCall() {
           },
         })
 
+        clearTimeout(timeoutId)
+
         const data = await response.json()
 
         if (!response.ok) {
           const errorMessage = data.message || data.error || `HTTP ${response.status}`
+
+          // Handle authentication errors specifically
+          if (response.status === 401) {
+            // Clear any existing tokens and redirect to login
+            if (
+              errorMessage.includes('Authorization header with Bearer token required') ||
+              errorMessage.includes('Invalid or expired JWT token')
+            ) {
+              console.warn('Authentication failed, clearing session')
+              // This will trigger re-authentication flow
+              await fetch('/api/auth/signout', { method: 'POST' })
+              window.location.href = '/login'
+              return Promise.reject(new Error('Authentication required. Redirecting to login...'))
+            }
+          }
+
           throw new Error(errorMessage)
         }
 
@@ -61,14 +87,23 @@ export function useApiCall() {
 
         return data
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+        let errorMessage = 'An unexpected error occurred'
+
+        if (err instanceof Error) {
+          if (err.name === 'AbortError') {
+            errorMessage = 'Request timed out. Please check your connection and try again.'
+          } else {
+            errorMessage = err.message
+          }
+        }
+
         setError(errorMessage)
 
         if (showErrorNotification) {
           showError(errorMessage)
         }
 
-        throw err
+        throw new Error(errorMessage)
       } finally {
         setIsLoading(false)
         if (showLoading) {
