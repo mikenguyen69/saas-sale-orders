@@ -73,7 +73,7 @@ export function useApiCall() {
               console.warn('Authentication failed, clearing session')
               // This will trigger re-authentication flow
               await fetch('/api/auth/signout', { method: 'POST' })
-              window.location.href = '/login'
+              window.location.href = '/auth/login'
               return Promise.reject(new Error('Authentication required. Redirecting to login...'))
             }
           }

@@ -80,7 +80,7 @@ describe('useApiCall - Critical Authentication Flow', () => {
       expect(completed).toBe(true)
 
       // Should redirect to login and not hang
-      expect(window.location.href).toBe('/login')
+      expect(window.location.href).toBe('/auth/login')
       expect(error).toBeInstanceOf(Error)
       expect(error?.message).toBe('Authentication required. Redirecting to login...')
     })
@@ -108,7 +108,7 @@ describe('useApiCall - Critical Authentication Flow', () => {
 
       // Should call signout API and redirect
       expect(fetch).toHaveBeenCalledWith('/api/auth/signout', { method: 'POST' })
-      expect(window.location.href).toBe('/login')
+      expect(window.location.href).toBe('/auth/login')
       expect(error?.message).toBe('Authentication required. Redirecting to login...')
     })
 
@@ -190,7 +190,7 @@ describe('useApiCall - Critical Authentication Flow', () => {
       })
 
       // Should still handle the error properly even without token
-      expect(window.location.href).toBe('/login')
+      expect(window.location.href).toBe('/auth/login')
       expect(error?.message).toBe('Authentication required. Redirecting to login...')
     })
   })
