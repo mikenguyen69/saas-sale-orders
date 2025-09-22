@@ -48,17 +48,40 @@ export function useAuth(): AuthState {
 
         if (error) {
           console.warn('Auth check failed:', error.message)
-          // Handle specific authentication errors
+          // Only clear auth state for actual authentication errors, not network issues
           if (
             error.message.includes('Invalid JWT') ||
             error.message.includes('expired') ||
-            error.status === 401
+            error.message.includes('invalid') ||
+            error.status === 401 ||
+            error.status === 403
           ) {
             console.warn('Session expired or invalid, clearing auth state')
             await supabase.auth.signOut({ scope: 'local' })
+            setUser(null)
+            setSession(null)
+          } else {
+            // For network errors or other issues, try to preserve existing session
+            console.warn(
+              'Network or temporary error during auth check, preserving existing session if valid'
+            )
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            if (session && session.access_token) {
+              // Check if the existing session is still valid
+              const now = Math.floor(Date.now() / 1000)
+              if (!session.expires_at || now < session.expires_at) {
+                console.log('Preserving valid existing session')
+                setSession(session)
+                // Don't set user yet, wait for successful verification
+                return
+              }
+            }
+            // If no valid session exists, clear the state
+            setUser(null)
+            setSession(null)
           }
-          setUser(null)
-          setSession(null)
         } else if (!user) {
           console.warn('No user found, clearing auth state')
           setUser(null)
@@ -73,17 +96,49 @@ export function useAuth(): AuthState {
         }
       } catch (error) {
         console.error('Auth check error:', error)
-        // Handle timeout or network errors
+        // Handle timeout or network errors - try to preserve valid sessions
         if (error instanceof Error && error.message === 'Auth check timeout') {
-          console.warn('Authentication check timed out, proceeding as unauthenticated')
+          console.warn('Authentication check timed out, checking for existing valid session')
         }
+
+        // Try to preserve existing session if it's still valid
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+          if (session && session.access_token) {
+            const now = Math.floor(Date.now() / 1000)
+            if (!session.expires_at || now < session.expires_at) {
+              console.log('Preserving valid session after auth check error')
+              setSession(session)
+              // Try to get user info if we have a valid session
+              try {
+                const {
+                  data: { user },
+                } = await supabase.auth.getUser()
+                if (user) {
+                  setUser(user)
+                  return // Successfully preserved session and user
+                }
+              } catch (userError) {
+                console.warn('Could not verify user with preserved session:', userError)
+              }
+            }
+          }
+        } catch (sessionError) {
+          console.warn('Could not check existing session:', sessionError)
+        }
+
+        // Only clear auth state if we couldn't preserve a valid session
         setUser(null)
         setSession(null)
-        // Ensure we clear any bad auth state
-        try {
-          await supabase.auth.signOut({ scope: 'local' })
-        } catch (signOutError) {
-          console.warn('Failed to clear auth state:', signOutError)
+        // Only sign out for actual auth errors, not network issues
+        if (!(error instanceof Error && error.message === 'Auth check timeout')) {
+          try {
+            await supabase.auth.signOut({ scope: 'local' })
+          } catch (signOutError) {
+            console.warn('Failed to clear auth state:', signOutError)
+          }
         }
       } finally {
         // CRITICAL: Always clear loading state
@@ -111,8 +166,22 @@ export function useAuth(): AuthState {
             setSession(session)
           } else {
             console.warn('Auth verification failed on', event, error?.message)
-            setUser(null)
-            setSession(null)
+            // Only clear auth state if this is an actual auth failure, not network issue
+            if (
+              error &&
+              (error.status === 401 ||
+                error.status === 403 ||
+                error.message.includes('Invalid JWT'))
+            ) {
+              setUser(null)
+              setSession(null)
+            } else {
+              // For network errors, preserve the session if it was provided
+              if (session && session.access_token) {
+                console.log('Preserving session despite verification error')
+                setSession(session)
+              }
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -120,8 +189,14 @@ export function useAuth(): AuthState {
         }
       } catch (error) {
         console.error('Auth state change error:', error)
-        setUser(null)
-        setSession(null)
+        // Don't automatically clear auth state on network errors during auth events
+        // Only clear if we know it's an auth failure
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setSession(null)
+        } else {
+          console.warn('Preserving auth state due to network error during auth event')
+        }
       } finally {
         // CRITICAL: Always clear loading state on auth events
         setLoading(false)
