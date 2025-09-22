@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "jira": {
+      "command": "@aashari/mcp-server-atlassian-jira",
+      "env": {
+        "JIRA_BASE_URL": "${JIRA_BASE_URL}",
+        "JIRA_USERNAME": "${JIRA_USERNAME}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+        "JIRA_DEFAULT_PROJECT": "${JIRA_DEFAULT_PROJECT}"
+      }
+    }
+  }
+}
