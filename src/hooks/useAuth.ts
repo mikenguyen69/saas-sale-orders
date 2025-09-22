@@ -31,13 +31,29 @@ export function useAuth(): AuthState {
       try {
         setLoading(true)
 
+        // Add timeout to prevent hanging auth checks
+        const authPromise = supabase.auth.getUser()
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Auth check timeout')), 10000)
+        )
+
         // Always use getUser() for secure authentication verification
         const {
           data: { user },
           error,
-        } = await supabase.auth.getUser()
+        } = await Promise.race([authPromise, timeoutPromise]) as any
 
-        if (error || !user) {
+        if (error) {
+          console.warn('Auth check failed:', error.message)
+          // Handle specific authentication errors
+          if (error.message.includes('Invalid JWT') || error.message.includes('expired') || error.status === 401) {
+            console.warn('Session expired or invalid, clearing auth state')
+            await supabase.auth.signOut({ scope: 'local' })
+          }
+          setUser(null)
+          setSession(null)
+        } else if (!user) {
+          console.warn('No user found, clearing auth state')
           setUser(null)
           setSession(null)
         } else {
@@ -50,9 +66,20 @@ export function useAuth(): AuthState {
         }
       } catch (error) {
         console.error('Auth check error:', error)
+        // Handle timeout or network errors
+        if (error instanceof Error && error.message === 'Auth check timeout') {
+          console.warn('Authentication check timed out, proceeding as unauthenticated')
+        }
         setUser(null)
         setSession(null)
+        // Ensure we clear any bad auth state
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch (signOutError) {
+          console.warn('Failed to clear auth state:', signOutError)
+        }
       } finally {
+        // CRITICAL: Always clear loading state
         setLoading(false)
       }
     }
@@ -65,25 +92,33 @@ export function useAuth(): AuthState {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event)
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Always verify user authenticity on auth events
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser()
-        if (!error && user) {
-          setUser(user)
-          setSession(session)
-        } else {
+      try {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Always verify user authenticity on auth events
+          const {
+            data: { user },
+            error,
+          } = await supabase.auth.getUser()
+          if (!error && user) {
+            setUser(user)
+            setSession(session)
+          } else {
+            console.warn('Auth verification failed on', event, error?.message)
+            setUser(null)
+            setSession(null)
+          }
+        } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setSession(null)
         }
-      } else if (event === 'SIGNED_OUT') {
+      } catch (error) {
+        console.error('Auth state change error:', error)
         setUser(null)
         setSession(null)
+      } finally {
+        // CRITICAL: Always clear loading state on auth events
+        setLoading(false)
       }
-
-      setLoading(false)
     })
 
     return () => {
@@ -159,9 +194,13 @@ export function useAuth(): AuthState {
     if (session && session.expires_at) {
       const now = Math.floor(Date.now() / 1000)
       if (now >= session.expires_at) {
-        console.warn('Session expired, clearing auth state')
+        console.warn('Session expired, clearing auth state and triggering re-auth')
         setUser(null)
         setSession(null)
+        // Trigger a re-auth check
+        supabase.auth.signOut({ scope: 'local' }).catch(err =>
+          console.warn('Failed to clear expired session:', err)
+        )
         return null
       }
     }
