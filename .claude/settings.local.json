@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "allow": ["mcp__atlassian__getVisibleJiraProjects"],
+    "allow": ["Bash(git push:*)"],
     "deny": [],
     "ask": []
   },
