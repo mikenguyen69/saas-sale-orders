@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase'
 import { useAuthContext } from '@/components/providers/AuthProvider'
 import { useAppStateContext } from '@/components/providers/AppStateProvider'
-import type { Database } from '@/types/supabase'
 
 export interface UploadProgress {
   file: File
@@ -19,10 +18,7 @@ export function useFileUpload() {
   const { user } = useAuthContext()
   const { showError, showSuccess } = useAppStateContext()
 
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
 
   const uploadFile = useCallback(
     async (file: File, bucket: string = 'attachments', folder?: string): Promise<string | null> => {

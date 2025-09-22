@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/providers/AuthProvider'
 import { useAppStateContext } from '@/components/providers/AppStateProvider'
-import type { Database } from '@/types/supabase'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export interface RealtimeSubscriptionOptions {
@@ -28,10 +27,7 @@ export function useRealtimeSubscription({
   const queryClient = useQueryClient()
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
 
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
 
   useEffect(() => {
     if (!enabled || !user) {
