@@ -31,5 +31,17 @@
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "hooks": {
+    "pre": {
+      "Edit": "/quality",
+      "Write": "npm run lint:check {filename}"
+    },
+    "post": {
+      "Edit": "/commit-work Auto-commit: Updated {filename}"
+    }
+  },
+  "mcpServers": ["jira", "slack", "github"],
+  "defaultBranch": "develop",
+  "protectedBranches": ["main", "develop"]
 }
