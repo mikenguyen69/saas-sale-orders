@@ -1,7 +1,33 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run lint:*)"
+      "Bash(npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npx prettier:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm update:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)",
+      "Bash(timeout 30s npm test src/__tests__/components/ErrorBoundary.test.tsx)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(sudo dd:*)",
+      "Bash(sudo tee:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)"
     ],
     "deny": [],
     "ask": []
@@ -15,14 +41,7 @@
       "Edit": "/commit-work Auto-commit: Updated {filename}"
     }
   },
-  "mcpServers": [
-    "jira",
-    "slack",
-    "github"
-  ],
+  "mcpServers": ["jira", "slack", "github"],
   "defaultBranch": "develop",
-  "protectedBranches": [
-    "main",
-    "develop"
-  ]
+  "protectedBranches": ["main", "develop"]
 }
