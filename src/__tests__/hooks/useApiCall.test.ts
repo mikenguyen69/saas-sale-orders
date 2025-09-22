@@ -52,9 +52,10 @@ describe('useApiCall - Critical Authentication Flow', () => {
       ;(fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
-        json: () => Promise.resolve({
-          message: 'Authorization header with Bearer token required'
-        }),
+        json: () =>
+          Promise.resolve({
+            message: 'Authorization header with Bearer token required',
+          }),
       })
 
       const { result } = renderHook(() => useApiCall())
@@ -88,9 +89,10 @@ describe('useApiCall - Critical Authentication Flow', () => {
       ;(fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
-        json: () => Promise.resolve({
-          message: 'Invalid or expired JWT token'
-        }),
+        json: () =>
+          Promise.resolve({
+            message: 'Invalid or expired JWT token',
+          }),
       })
 
       const { result } = renderHook(() => useApiCall())
@@ -112,14 +114,15 @@ describe('useApiCall - Critical Authentication Flow', () => {
 
     it('should handle request timeout without hanging', async () => {
       // Mock a hanging request that times out
-      ;(fetch as jest.Mock).mockImplementation(() =>
-        new Promise((_, reject) => {
-          setTimeout(() => {
-            const abortError = new Error('The operation was aborted')
-            abortError.name = 'AbortError'
-            reject(abortError)
-          }, 100)
-        })
+      ;(fetch as jest.Mock).mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              const abortError = new Error('The operation was aborted')
+              abortError.name = 'AbortError'
+              reject(abortError)
+            }, 100)
+          })
       )
 
       const { result } = renderHook(() => useApiCall())
@@ -134,16 +137,19 @@ describe('useApiCall - Critical Authentication Flow', () => {
       })
 
       expect(error?.message).toBe('Request timed out. Please check your connection and try again.')
-      expect(mockShowError).toHaveBeenCalledWith('Request timed out. Please check your connection and try again.')
+      expect(mockShowError).toHaveBeenCalledWith(
+        'Request timed out. Please check your connection and try again.'
+      )
     })
 
     it('should clean up loading states after authentication error', async () => {
       ;(fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
-        json: () => Promise.resolve({
-          message: 'Authorization header with Bearer token required'
-        }),
+        json: () =>
+          Promise.resolve({
+            message: 'Authorization header with Bearer token required',
+          }),
       })
 
       const { result } = renderHook(() => useApiCall())
@@ -163,13 +169,13 @@ describe('useApiCall - Critical Authentication Flow', () => {
 
     it('should handle missing token scenario gracefully', async () => {
       mockGetAccessToken.mockReturnValue(null)
-
       ;(fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 401,
-        json: () => Promise.resolve({
-          message: 'Authorization header with Bearer token required'
-        }),
+        json: () =>
+          Promise.resolve({
+            message: 'Authorization header with Bearer token required',
+          }),
       })
 
       const { result } = renderHook(() => useApiCall())
@@ -198,9 +204,8 @@ describe('useApiCall - Critical Authentication Flow', () => {
       }
 
       jest.spyOn(global, 'AbortController').mockImplementation(() => mockController as any)
-
-      ;(fetch as jest.Mock).mockImplementation(() =>
-        new Promise(() => {}) // Never resolves
+      ;(fetch as jest.Mock).mockImplementation(
+        () => new Promise(() => {}) // Never resolves
       )
 
       const { result } = renderHook(() => useApiCall())

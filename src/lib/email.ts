@@ -56,7 +56,7 @@ export class EmailService {
         throw new Error('Email must have either HTML or text content')
       }
 
-      const emailData: sgMail.MailDataRequired = {
+      const emailData = {
         to: options.to,
         from: options.from || this.defaultFrom,
         subject: options.subject,
@@ -65,7 +65,7 @@ export class EmailService {
         cc: options.cc,
         bcc: options.bcc,
         attachments: options.attachments,
-      }
+      } as sgMail.MailDataRequired
 
       console.log(
         `[EmailService] Sending email to: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`
