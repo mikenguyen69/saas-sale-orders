@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '@/types/supabase'
+import { createClient } from '@/lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
 
 export interface AuthState {
@@ -20,10 +19,7 @@ export function useAuth(): AuthState {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
 
   useEffect(() => {
     // Secure authentication check on mount
@@ -113,17 +109,31 @@ export function useAuth(): AuthState {
             if (!session.expires_at || now < session.expires_at) {
               console.log('Preserving valid session after auth check error')
               setSession(session)
-              // Try to get user info if we have a valid session
+              // Try to get user info if we have a valid session - with timeout protection
               try {
+                const userPromise = supabase.auth.getUser()
+                const userTimeoutPromise = new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('User verification timeout')), 5000)
+                )
+
                 const {
                   data: { user },
-                } = await supabase.auth.getUser()
+                } = (await Promise.race([userPromise, userTimeoutPromise])) as {
+                  data: { user: User | null }
+                  error: { message: string; status?: number } | null
+                }
+
                 if (user) {
                   setUser(user)
                   return // Successfully preserved session and user
                 }
               } catch (userError) {
-                console.warn('Could not verify user with preserved session:', userError)
+                console.warn(
+                  'Could not verify user with preserved session (timeout or error):',
+                  userError
+                )
+                // Don't clear the session, just proceed without user verification
+                // The session is still valid, user verification just failed
               }
             }
           }
@@ -152,30 +162,52 @@ export function useAuth(): AuthState {
 
       try {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Always verify user authenticity on auth events
-          const {
-            data: { user },
-            error,
-          } = await supabase.auth.getUser()
-          if (!error && user) {
-            setUser(user)
-            setSession(session)
-          } else {
-            console.warn('Auth verification failed on', event, error?.message)
-            // Only clear auth state if this is an actual auth failure, not network issue
-            if (
-              error &&
-              (error.status === 401 ||
-                error.status === 403 ||
-                error.message.includes('Invalid JWT'))
-            ) {
-              setUser(null)
-              setSession(null)
+          // Always verify user authenticity on auth events - with timeout protection
+          try {
+            const authPromise = supabase.auth.getUser()
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Auth event verification timeout')), 5000)
+            )
+
+            const {
+              data: { user },
+              error,
+            } = (await Promise.race([authPromise, timeoutPromise])) as {
+              data: { user: User | null }
+              error: { message: string; status?: number } | null
+            }
+
+            if (!error && user) {
+              setUser(user)
+              setSession(session)
             } else {
-              // For network errors, preserve the session if it was provided
-              if (session && session.access_token) {
-                console.log('Preserving session despite verification error')
+              console.warn('Auth verification failed on', event, error?.message)
+              // Only clear auth state if this is an actual auth failure, not network issue
+              if (
+                error &&
+                (error.status === 401 ||
+                  error.status === 403 ||
+                  error.message.includes('Invalid JWT'))
+              ) {
+                setUser(null)
+                setSession(null)
+              } else {
+                // For network errors, preserve the session if it was provided
+                if (session && session.access_token) {
+                  console.log('Preserving session despite verification error')
+                  setSession(session)
+                }
+              }
+            }
+          } catch (verificationError) {
+            console.warn('Auth event verification timeout/error:', verificationError)
+            // On timeout, preserve the session if it was provided and looks valid
+            if (session && session.access_token) {
+              const now = Math.floor(Date.now() / 1000)
+              if (!session.expires_at || now < session.expires_at) {
+                console.log('Preserving valid session after verification timeout')
                 setSession(session)
+                // Don't set user since we couldn't verify, but keep the session
               }
             }
           }
