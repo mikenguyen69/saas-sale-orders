@@ -91,6 +91,6 @@ describe('Session Expiry Integration', () => {
 
     // Test session without expiry
     const sessionWithoutExpiry = { access_token: 'token' }
-    expect(sessionWithoutExpiry.expires_at).toBeUndefined()
+    expect((sessionWithoutExpiry as any).expires_at).toBeUndefined()
   })
 })

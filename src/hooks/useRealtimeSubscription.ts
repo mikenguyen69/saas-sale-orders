@@ -6,12 +6,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/providers/AuthProvider'
 import { useAppStateContext } from '@/components/providers/AppStateProvider'
 import type { Database } from '@/types/supabase'
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export interface RealtimeSubscriptionOptions {
   table: string
   event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*'
   filter?: string
-  onEvent?: (payload: any) => void
+  onEvent?: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void
   enabled?: boolean
 }
 
@@ -25,7 +26,7 @@ export function useRealtimeSubscription({
   const { user } = useAuthContext()
   const { showInfo } = useAppStateContext()
   const queryClient = useQueryClient()
-  const subscriptionRef = useRef<any>(null)
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
 
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,13 +71,13 @@ export function useRealtimeSubscription({
           }
 
           if (table === 'products' && payload.eventType === 'UPDATE') {
-            const oldStock = payload.old?.stock_quantity
-            const newStock = payload.new?.stock_quantity
+            const oldStock = payload.old?.stock_quantity as number | undefined
+            const newStock = payload.new?.stock_quantity as number | undefined
 
-            if (oldStock !== newStock && newStock !== undefined) {
+            if (oldStock !== newStock && typeof newStock === 'number') {
               if (newStock <= 0) {
                 showInfo(`Product ${payload.new.name} is now out of stock`)
-              } else if (newStock <= 10 && oldStock > 10) {
+              } else if (newStock <= 10 && typeof oldStock === 'number' && oldStock > 10) {
                 showInfo(`Product ${payload.new.name} is running low on stock`)
               }
             }
