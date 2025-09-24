@@ -45,9 +45,35 @@ model User {
   warehouseOrders        SaleOrder[]           @relation("WarehouseStaff")
   attachmentsUploaded    Attachment[]
   orderStatusChanges     OrderStatusHistory[]
+  customersCreated       Customer[]
 
   @@index([deletedAt])
   @@map("users")
+}
+
+model Customer {
+  id                     String                @id @default(uuid()) @db.Uuid
+  name                   String
+  contactPerson          String                @map("contact_person")
+  email                  String
+  phone                  String?
+  shippingAddress        String?               @map("shipping_address")
+  billingAddress         String?               @map("billing_address")
+  createdBy              String                @map("created_by") @db.Uuid
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+  deletedAt              DateTime?             @map("deleted_at")
+
+  // Relations
+  creator                User                  @relation(fields: [createdBy], references: [id])
+  saleOrders             SaleOrder[]
+
+  @@unique([email, createdBy])
+  @@index([createdBy])
+  @@index([name, createdBy])
+  @@index([email, createdBy])
+  @@index([deletedAt])
+  @@map("customers")
 }
 
 model Product {
@@ -75,6 +101,9 @@ model Product {
 
 model SaleOrder {
   id                     String                @id @default(uuid()) @db.Uuid
+  // Customer relationship (optional for backward compatibility)
+  customerId             String?               @map("customer_id") @db.Uuid
+  // Keep existing customer fields for backward compatibility during migration
   customerName           String                @map("customer_name")
   contactPerson          String                @map("contact_person")
   email                  String
@@ -90,6 +119,7 @@ model SaleOrder {
   deletedAt              DateTime?             @map("deleted_at")
 
   // Relations
+  customer               Customer?             @relation(fields: [customerId], references: [id])
   salesperson            User                  @relation("Salesperson", fields: [salespersonId], references: [id])
   manager                User?                 @relation("Manager", fields: [managerId], references: [id])
   warehouseStaff         User?                 @relation("WarehouseStaff", fields: [warehouseId], references: [id])
@@ -99,6 +129,7 @@ model SaleOrder {
 
   @@index([status])
   @@index([salespersonId])
+  @@index([customerId])
   @@index([deletedAt])
   @@map("sale_orders")
 }
