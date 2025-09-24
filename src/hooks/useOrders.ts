@@ -32,7 +32,7 @@ export interface CreateOrderData {
   shipping_address?: string
   delivery_date?: string
   notes: string
-  order_items: Omit<OrderItem, 'id' | 'order_id' | 'line_total' | 'is_in_stock' | 'line_status'>[]
+  items: Omit<OrderItem, 'id' | 'order_id' | 'line_total' | 'is_in_stock' | 'line_status'>[]
 }
 
 export function useOrders(filters: OrderFilters = {}) {
