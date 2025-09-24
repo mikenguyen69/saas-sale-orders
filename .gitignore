@@ -90,3 +90,4 @@ prisma/dev.db*
 
 # Husky
 .husky/_
+.claude/settings.local.json
