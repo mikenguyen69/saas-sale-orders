@@ -7,6 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { OrderDetails } from '@/components/orders/OrderDetails'
 import { useOrder, useApproveOrder, useRejectOrder, useFulfillOrder } from '@/hooks/useOrders'
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
+import { useAppUser } from '@/hooks/useAppUser'
 
 interface OrderDetailsPageProps {
   params: {
@@ -17,6 +18,7 @@ interface OrderDetailsPageProps {
 export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const router = useRouter()
   const { data: order, isLoading, error } = useOrder(params.id)
+  const { data: appUser, isLoading: userLoading } = useAppUser()
 
   const approveOrderMutation = useApproveOrder()
   const rejectOrderMutation = useRejectOrder()
@@ -57,7 +59,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || userLoading) {
     return (
       <AppLayout>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -88,7 +90,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
         onApprove={handleApprove}
         onReject={handleReject}
         onFulfill={handleFulfill}
-        userRole="salesperson" // TODO: Get from user context
+        userRole={appUser?.role || 'salesperson'}
         isLoading={isProcessing}
       />
     </AppLayout>

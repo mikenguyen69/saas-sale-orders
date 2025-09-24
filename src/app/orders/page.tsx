@@ -18,6 +18,7 @@ import { DataGrid, GridColDef, GridActionsCellItem, GridRowParams } from '@mui/x
 import { AppLayout } from '@/components/layout/AppLayout'
 import { OrderFilters } from '@/components/orders/OrderFilters'
 import { useOrders, useApproveOrder, useRejectOrder, useFulfillOrder } from '@/hooks/useOrders'
+import { useAppUser } from '@/hooks/useAppUser'
 import type { SaleOrder } from '@/types'
 import type { OrderFilters as IOrderFilters } from '@/components/orders/OrderFilters'
 
@@ -34,6 +35,7 @@ export default function OrdersPage() {
     page,
     limit: itemsPerPage,
   })
+  const { data: appUser, isLoading: userLoading } = useAppUser()
 
   const approveOrderMutation = useApproveOrder()
   const rejectOrderMutation = useRejectOrder()
@@ -80,9 +82,7 @@ export default function OrdersPage() {
     }
   }
 
-  // TODO: Get user role from user details when available
-  const getUserRole = (): 'salesperson' | 'manager' | 'warehouse' => 'salesperson' // Default for now
-  const userRole = getUserRole()
+  const userRole = appUser?.role || 'salesperson'
 
   // Status color mapping
   const getStatusColor = (status: string) => {
@@ -277,7 +277,7 @@ export default function OrdersPage() {
         <DataGrid
           rows={rows}
           columns={columns}
-          loading={isLoading}
+          loading={isLoading || userLoading}
           paginationMode="server"
           rowCount={data?.pagination.total || 0}
           paginationModel={{ page: page - 1, pageSize: itemsPerPage }}
