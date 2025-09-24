@@ -221,7 +221,7 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
         notes: data.notes || '',
         shipping_address: data.shipping_address || '',
         delivery_date: data.delivery_date || '',
-        order_items: orderItems.map(item => ({
+        items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.unit_price,
@@ -255,7 +255,7 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
         notes: data.notes || '',
         shipping_address: data.shipping_address || '',
         delivery_date: data.delivery_date || '',
-        order_items: orderItems.map(item => ({
+        items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.unit_price,
