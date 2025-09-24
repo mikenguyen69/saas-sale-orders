@@ -17,6 +17,7 @@ import { Add, Edit, Visibility, CheckCircle, Cancel, LocalShipping } from '@mui/
 import { DataGrid, GridColDef, GridActionsCellItem, GridRowParams } from '@mui/x-data-grid'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { OrderFilters } from '@/components/orders/OrderFilters'
+import { OrderActionDialog, type OrderActionType } from '@/components/orders/OrderActionDialog'
 import { useOrders, useApproveOrder, useRejectOrder, useFulfillOrder } from '@/hooks/useOrders'
 import { useAppUser } from '@/hooks/useAppUser'
 import type { SaleOrder } from '@/types'
@@ -28,6 +29,11 @@ export default function OrdersPage() {
   const [filters, setFilters] = useState<IOrderFilters>({})
   const [page, setPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
+  const [actionDialog, setActionDialog] = useState<{
+    open: boolean
+    action: OrderActionType
+    order: SaleOrder | null
+  }>({ open: false, action: 'approve', order: null })
   const router = useRouter()
 
   const { data, isLoading, error } = useOrders({
@@ -58,20 +64,31 @@ export default function OrdersPage() {
     router.push('/orders/new')
   }
 
-  const handleApproveOrder = async (order: SaleOrder) => {
+  const handleApproveOrder = (order: SaleOrder) => {
+    setActionDialog({ open: true, action: 'approve', order })
+  }
+
+  const handleRejectOrder = (order: SaleOrder) => {
+    setActionDialog({ open: true, action: 'reject', order })
+  }
+
+  const handleConfirmAction = async (notes?: string) => {
+    if (!actionDialog.order) return
+
     try {
-      await approveOrderMutation.mutateAsync(order.id)
+      if (actionDialog.action === 'approve') {
+        await approveOrderMutation.mutateAsync({ id: actionDialog.order.id, notes })
+      } else {
+        await rejectOrderMutation.mutateAsync({ id: actionDialog.order.id, notes })
+      }
+      setActionDialog({ open: false, action: 'approve', order: null })
     } catch (error) {
-      console.error('Failed to approve order:', error)
+      console.error(`Failed to ${actionDialog.action} order:`, error)
     }
   }
 
-  const handleRejectOrder = async (order: SaleOrder) => {
-    try {
-      await rejectOrderMutation.mutateAsync(order.id)
-    } catch (error) {
-      console.error('Failed to reject order:', error)
-    }
+  const handleCloseDialog = () => {
+    setActionDialog({ open: false, action: 'approve', order: null })
   }
 
   const handleFulfillOrder = async (order: SaleOrder) => {
@@ -323,6 +340,23 @@ export default function OrdersPage() {
           }}
         />
       </Box>
+
+      <OrderActionDialog
+        open={actionDialog.open}
+        onClose={handleCloseDialog}
+        onConfirm={handleConfirmAction}
+        action={actionDialog.action}
+        orderInfo={{
+          id: actionDialog.order?.id || '',
+          customerName: actionDialog.order?.customer_name || 'Unknown Customer',
+          total:
+            actionDialog.order?.order_items?.reduce(
+              (total, item) => total + (item.line_total || 0),
+              0
+            ) || 0,
+        }}
+        loading={approveOrderMutation.isPending || rejectOrderMutation.isPending}
+      />
     </AppLayout>
   )
 }
