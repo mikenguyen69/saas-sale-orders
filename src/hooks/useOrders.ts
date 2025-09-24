@@ -152,11 +152,12 @@ export function useApproveOrder() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
       const response = await callApi<{ success: boolean; data: SaleOrder }>(
         `/api/v1/orders/${id}/approve`,
         {
           method: 'POST',
+          body: notes ? JSON.stringify({ notes }) : undefined,
         },
         {
           showSuccessNotification: true,
@@ -165,9 +166,9 @@ export function useApproveOrder() {
       )
       return response.data
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
-      queryClient.invalidateQueries({ queryKey: ['order', id] })
+      queryClient.invalidateQueries({ queryKey: ['order', variables.id] })
     },
   })
 }
@@ -177,11 +178,12 @@ export function useRejectOrder() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
       const response = await callApi<{ success: boolean; data: SaleOrder }>(
         `/api/v1/orders/${id}/reject`,
         {
           method: 'POST',
+          body: notes ? JSON.stringify({ notes }) : undefined,
         },
         {
           showSuccessNotification: true,
@@ -190,9 +192,9 @@ export function useRejectOrder() {
       )
       return response.data
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
-      queryClient.invalidateQueries({ queryKey: ['order', id] })
+      queryClient.invalidateQueries({ queryKey: ['order', variables.id] })
     },
   })
 }

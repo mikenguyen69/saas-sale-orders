@@ -86,6 +86,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { userDetails, supabase } = await getAuthenticatedUser(request)
     const { id } = params
 
+    // Parse request body for notes
+    const body = await request.json().catch(() => ({}))
+    const { notes } = body
+
     // Only managers can approve orders
     requireRole(userDetails.role, ['manager'])
 
@@ -135,13 +139,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update order status to approved
+    const updateData: any = {
+      status: 'approved',
+      manager_id: userDetails.id,
+      updated_at: new Date().toISOString(),
+    }
+
+    // Add notes if provided
+    if (notes && typeof notes === 'string') {
+      updateData.notes = notes.substring(0, 1000) // Limit to 1000 characters as per API spec
+    }
+
     const { data: updatedOrder, error: updateError } = await supabase
       .from('sale_orders')
-      .update({
-        status: 'approved',
-        manager_id: userDetails.id,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select(
         `
