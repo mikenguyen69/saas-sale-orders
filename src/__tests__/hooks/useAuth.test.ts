@@ -9,7 +9,6 @@ describe('Session Expiry Logic', () => {
     if (session && session.expires_at) {
       const now = Math.floor(Date.now() / 1000)
       if (now >= session.expires_at) {
-        console.warn('Session expired, clearing auth state')
         setUser(null)
         setSession(null)
         return null
