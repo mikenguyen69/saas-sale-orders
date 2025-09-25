@@ -47,3 +47,21 @@ export const userSchema = yup.object().shape({
   name: yup.string().required('Name is required'),
   role: yup.string().oneOf(['salesperson', 'manager', 'warehouse']).required('Role is required'),
 })
+
+export const customerSchema = yup.object().shape({
+  name: yup.string().required('Customer name is required'),
+  contactPerson: yup.string().required('Contact person is required'),
+  email: yup.string().email('Invalid email').required('Email is required'),
+  phone: yup.string(),
+  shippingAddress: yup.string(),
+  billingAddress: yup.string(),
+})
+
+export const customerUpdateSchema = yup.object().shape({
+  name: yup.string(),
+  contactPerson: yup.string(),
+  email: yup.string().email('Invalid email'),
+  phone: yup.string(),
+  shippingAddress: yup.string(),
+  billingAddress: yup.string(),
+})

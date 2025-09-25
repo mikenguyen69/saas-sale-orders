@@ -12,6 +12,56 @@ export interface User {
   created_at: string
 }
 
+export interface Customer {
+  id: string
+  name: string
+  contact_person: string
+  email: string
+  phone?: string
+  shipping_address?: string
+  billing_address?: string
+  tenant_id: string
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+
+export interface CustomerCreateData {
+  name: string
+  contact_person: string
+  email: string
+  phone?: string
+  shipping_address?: string
+  billing_address?: string
+}
+
+export interface CustomerUpdateData {
+  name?: string
+  contact_person?: string
+  email?: string
+  phone?: string
+  shipping_address?: string
+  billing_address?: string
+}
+
+export interface CustomerSearchResult {
+  customers: Customer[]
+  total: number
+  hasMore: boolean
+}
+
+export interface CustomerApiResponse {
+  success: boolean
+  data?: Customer
+  error?: string
+}
+
+export interface CustomerListApiResponse {
+  success: boolean
+  data?: CustomerSearchResult
+  error?: string
+}
+
 export interface Product {
   id: string
   code: string
@@ -28,6 +78,7 @@ export interface Product {
 
 export interface SaleOrder {
   id: string
+  customer_id?: string
   customer_name: string
   contact_person: string
   email: string
@@ -42,6 +93,7 @@ export interface SaleOrder {
   updated_at: string
   order_items?: OrderItem[]
   attachments?: Attachment[]
+  customer?: Customer
 }
 
 export interface OrderItem {

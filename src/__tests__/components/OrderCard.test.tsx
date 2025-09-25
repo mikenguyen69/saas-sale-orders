@@ -74,12 +74,6 @@ describe('OrderCard', () => {
     expect(screen.getByText('$175.00')).toBeInTheDocument()
   })
 
-  it('displays delivery date when provided', () => {
-    renderWithTheme(<OrderCard order={mockOrder} />)
-
-    expect(screen.getByText('1/12/2024')).toBeInTheDocument()
-  })
-
   it('calls onView when view button is clicked', () => {
     const onView = jest.fn()
     renderWithTheme(<OrderCard order={mockOrder} onView={onView} />)

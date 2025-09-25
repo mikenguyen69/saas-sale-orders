@@ -70,7 +70,6 @@ export function useApiCall() {
               errorMessage.includes('Authorization header with Bearer token required') ||
               errorMessage.includes('Invalid or expired JWT token')
             ) {
-              console.warn('Authentication failed, clearing session')
               // This will trigger re-authentication flow
               await fetch('/api/auth/signout', { method: 'POST' })
               window.location.href = '/auth/login'
