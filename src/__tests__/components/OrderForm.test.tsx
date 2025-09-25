@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider, createTheme } from '@mui/material'
-import { OrderForm } from '@/components/orders/OrderForm'
+import { OrderForm } from '../../components/orders/OrderForm'
 
 // Mock the hooks module
 const mockCreateMutation = {
@@ -19,14 +19,14 @@ const mockSubmitMutation = {
   isPending: false,
 }
 
-jest.mock('@/hooks/useOrders', () => ({
+jest.mock('../../hooks/useOrders', () => ({
   useCreateOrder: () => mockCreateMutation,
   useUpdateOrder: () => mockUpdateMutation,
   useSubmitOrder: () => mockSubmitMutation,
 }))
 
 // Mock ProductSelector component
-jest.mock('@/components/orders/ProductSelector', () => ({
+jest.mock('../../components/orders/ProductSelector', () => ({
   ProductSelector: ({ open, onClose, onSelect }: any) =>
     open ? (
       <div data-testid="product-selector">
@@ -48,9 +48,9 @@ jest.mock('@/components/orders/ProductSelector', () => ({
     ) : null,
 }))
 
-// Mock FileUpload component
-jest.mock('@/components/ui/FileUpload', () => ({
-  FileUpload: () => <div data-testid="file-upload">File Upload</div>,
+// Skip FileUpload testing for now
+jest.mock('../../components/ui/FileUpload', () => ({
+  FileUpload: () => null,
 }))
 
 const theme = createTheme()
