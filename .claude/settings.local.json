@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "mcp__atlassian__addCommentToJiraIssue"
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []
