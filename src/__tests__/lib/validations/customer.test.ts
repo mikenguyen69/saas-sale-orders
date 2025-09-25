@@ -270,7 +270,9 @@ describe('Customer Validation Schemas', () => {
       const result = CustomerQuerySchema.safeParse(query)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('Number must be greater than or equal to 1')
+        expect(result.error.issues[0].message).toContain(
+          'Number must be greater than or equal to 1'
+        )
       }
     })
 

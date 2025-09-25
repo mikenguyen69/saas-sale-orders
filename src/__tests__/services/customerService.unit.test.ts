@@ -110,37 +110,55 @@ describe('CustomerService Unit Tests', () => {
 
     it('should build conditions without search', () => {
       const userId = 'user-123'
-      const search = undefined
+      const search: string | undefined = undefined
 
-      const whereClause = {
+      // Build base clause
+      const baseClause = {
         createdBy: userId,
         deletedAt: null,
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } },
-            { contactPerson: { contains: search, mode: 'insensitive' } },
-          ],
-        }),
       }
+
+      // Add search conditions if search exists
+      const searchClause = search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { email: { contains: search, mode: 'insensitive' as const } },
+              { contactPerson: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}
+
+      const whereClause = { ...baseClause, ...searchClause }
 
       expect(whereClause.createdBy).toBe(userId)
       expect(whereClause.deletedAt).toBe(null)
-      expect(whereClause.OR).toBeUndefined()
+      expect('OR' in whereClause).toBe(false)
     })
   })
 
   describe('Data Validation Logic', () => {
     it('should validate email uniqueness logic', () => {
-      const currentEmail = 'old@test.com'
-      const newEmail = 'new@test.com'
-      const sameEmail = 'old@test.com'
+      const currentEmail: string = 'old@test.com'
+      const newEmail: string = 'new@test.com'
+      const sameEmail: string = 'old@test.com'
 
-      const shouldCheckDuplicate = newEmail && newEmail !== currentEmail
-      const shouldNotCheckSame = sameEmail === currentEmail
+      // Test the actual validation logic
+      const needsDuplicateCheck = (current: string, updated?: string) => {
+        return Boolean(updated && updated !== current)
+      }
 
-      expect(shouldCheckDuplicate).toBe(true)
-      expect(shouldNotCheckSame).toBe(true)
+      // Test different scenarios
+      expect(needsDuplicateCheck(currentEmail, newEmail)).toBe(true)
+      expect(needsDuplicateCheck(currentEmail, sameEmail)).toBe(false)
+      expect(needsDuplicateCheck(currentEmail, undefined)).toBe(false)
+
+      // Test boolean logic separately
+      const isDifferentEmail = (email1: string, email2: string) => email1 !== email2
+      const isSameEmail = (email1: string, email2: string) => email1 === email2
+
+      expect(isDifferentEmail(currentEmail, newEmail)).toBe(true)
+      expect(isSameEmail(currentEmail, sameEmail)).toBe(true)
     })
 
     it('should identify required field updates', () => {

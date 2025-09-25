@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { describe, expect, it, jest } from '@jest/globals'
+import { describe, expect, it } from '@jest/globals'
 
 describe('Customer API Integration Tests', () => {
   describe('Service Integration', () => {
@@ -35,12 +35,12 @@ describe('Customer API Integration Tests', () => {
       const successResponse = {
         success: true,
         data: {},
-        message: 'Success'
+        message: 'Success',
       }
 
       const errorResponse = {
         success: false,
-        error: 'Error message'
+        error: 'Error message',
       }
 
       expect(successResponse.success).toBe(true)
