@@ -1,0 +1,1 @@
+- Always checkout the new branch when you work on JIRA story. When commit, don't skip the pre-commit hooks. Once it's done, commit the change, push PR and update the JIRA with relevant info and PR links

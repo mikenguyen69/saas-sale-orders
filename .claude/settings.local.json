@@ -1,6 +1,8 @@
 {
   "permissions": {
-    "allow": ["Bash(git add:*)"],
+    "allow": [
+      "mcp__atlassian__addCommentToJiraIssue"
+    ],
     "deny": [],
     "ask": []
   },
@@ -13,7 +15,14 @@
       "Edit": "/commit-work Auto-commit: Updated {filename}"
     }
   },
-  "mcpServers": ["jira", "slack", "github"],
+  "mcpServers": [
+    "jira",
+    "slack",
+    "github"
+  ],
   "defaultBranch": "develop",
-  "protectedBranches": ["main", "develop"]
+  "protectedBranches": [
+    "main",
+    "develop"
+  ]
 }
