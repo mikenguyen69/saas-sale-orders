@@ -32,5 +32,29 @@ CREATE POLICY "Users can view relevant orders" ON sale_orders
         )
     );
 
+-- Now update the customers RLS policy to include order-based access
+-- Drop the simple policy we created earlier
+DROP POLICY IF EXISTS "Users can view own customers" ON customers;
+
+-- Create the complete policy that includes order-based access
+CREATE POLICY "Users can view own customers" ON customers
+    FOR SELECT USING (
+        created_by::text = auth.uid()::text OR
+        EXISTS (
+            SELECT 1 FROM sale_orders so
+            WHERE so.customer_id = customers.id
+            AND (
+                so.salesperson_id::text = auth.uid()::text OR
+                so.manager_id::text = auth.uid()::text OR
+                so.warehouse_id::text = auth.uid()::text OR
+                EXISTS (
+                    SELECT 1 FROM users u
+                    WHERE u.id::text = auth.uid()::text
+                    AND u.role IN ('manager', 'warehouse')
+                )
+            )
+        )
+    );
+
 -- Add comment to the new column for documentation
 COMMENT ON COLUMN sale_orders.customer_id IS 'Optional reference to customer - NULL for orders with embedded customer data (backward compatibility)';

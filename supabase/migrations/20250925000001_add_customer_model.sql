@@ -3,6 +3,15 @@
 -- Date: 2025-09-25
 -- JIRA: CCS-34
 
+-- Ensure the trigger function exists (in case it's missing)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 -- Create customers table
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -37,24 +46,10 @@ CREATE TRIGGER update_customers_updated_at
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for customers
--- Users can view customers they created or customers used in orders they have access to
+-- Users can view customers they created (initially - will be updated after customer_id column is added)
 CREATE POLICY "Users can view own customers" ON customers
     FOR SELECT USING (
-        created_by::text = auth.uid()::text OR
-        EXISTS (
-            SELECT 1 FROM sale_orders so
-            WHERE so.customer_id = customers.id
-            AND (
-                so.salesperson_id::text = auth.uid()::text OR
-                so.manager_id::text = auth.uid()::text OR
-                so.warehouse_id::text = auth.uid()::text OR
-                EXISTS (
-                    SELECT 1 FROM users u
-                    WHERE u.id::text = auth.uid()::text
-                    AND u.role IN ('manager', 'warehouse')
-                )
-            )
-        )
+        created_by::text = auth.uid()::text
     );
 
 -- Users can create customers (salespeople, managers)
