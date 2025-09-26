@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Box, TextField, Button, Grid, Typography, Alert, CircularProgress } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { Customer, CustomerCreateData } from '@/types'
+import { CustomerApi } from '@/services/customerApi'
+import { isApiError } from '@/utils/api'
 
 const customerSchema = yup.object({
   name: yup.string().required('Customer name is required').max(200, 'Customer name too long'),
@@ -28,6 +30,7 @@ interface CustomerFormProps {
   onCancel: () => void
   mode?: 'create' | 'edit'
   loading?: boolean
+  resetAfterCreate?: boolean
 }
 
 export function CustomerForm({
@@ -37,15 +40,15 @@ export function CustomerForm({
   onCancel,
   mode = 'create',
   loading = false,
+  resetAfterCreate = false,
 }: CustomerFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, isSubmitting },
     setError,
     clearErrors,
     watch,
@@ -77,8 +80,10 @@ export function CustomerForm({
     }
   }, [customer, reset])
 
-  // Email duplicate validation
+  // Email duplicate validation with race condition protection
   useEffect(() => {
+    const controller = new AbortController()
+
     const checkDuplicateEmail = async () => {
       if (!email || email === customer?.email) {
         clearErrors('email')
@@ -86,103 +91,99 @@ export function CustomerForm({
       }
 
       try {
-        const response = await fetch(
-          `/api/v1/customers?search=${encodeURIComponent(email)}&limit=1`
-        )
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data && result.data.length > 0) {
-            const existingCustomer = result.data[0]
-            if (existingCustomer.email.toLowerCase() === email.toLowerCase()) {
-              setError('email', {
-                type: 'manual',
-                message: 'A customer with this email already exists',
-              })
-            }
-          }
+        const isAvailable = await CustomerApi.checkEmailAvailability({
+          email,
+          excludeCustomerId: customer?.id,
+          signal: controller.signal,
+        })
+
+        if (!isAvailable) {
+          setError('email', {
+            type: 'manual',
+            message: 'A customer with this email already exists',
+          })
         }
       } catch (error) {
-        console.error('Error checking duplicate email:', error)
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error checking duplicate email:', error)
+        }
       }
     }
 
-    const timeoutId = setTimeout(checkDuplicateEmail, 500)
-    return () => clearTimeout(timeoutId)
-  }, [email, customer?.email, setError, clearErrors])
+    const timeoutId = setTimeout(checkDuplicateEmail, 300)
+    return () => {
+      controller.abort()
+      clearTimeout(timeoutId)
+    }
+  }, [email, customer?.email, customer?.id, setError, clearErrors])
 
-  const handleFormSubmit = async (data: CustomerFormData, selectAfterSave = false) => {
-    setIsSubmitting(true)
-    setSubmitError(null)
+  const handleFormSubmit = useCallback(
+    async (data: CustomerFormData, selectAfterSave = false) => {
+      setSubmitError(null)
 
-    try {
-      const customerData: CustomerCreateData = {
-        name: data.name,
-        contact_person: data.contact_person,
-        email: data.email,
-        phone: data.phone || undefined,
-        shipping_address: data.shipping_address || undefined,
-        billing_address: data.billing_address || undefined,
-      }
-
-      let response: Response
-      if (mode === 'edit' && customer) {
-        response = await fetch(`/api/v1/customers/${customer.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(customerData),
-        })
-      } else {
-        response = await fetch('/api/v1/customers', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(customerData),
-        })
-      }
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        if (result.errors) {
-          // Handle validation errors
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            if (Array.isArray(messages) && messages.length > 0) {
-              setError(field as keyof CustomerFormData, {
-                type: 'server',
-                message: messages[0],
-              })
-            }
-          })
-        } else {
-          throw new Error(result.error || `HTTP error! status: ${response.status}`)
+      try {
+        const customerData: CustomerCreateData = {
+          name: data.name,
+          contact_person: data.contact_person,
+          email: data.email,
+          phone: data.phone || undefined,
+          shipping_address: data.shipping_address || undefined,
+          billing_address: data.billing_address || undefined,
         }
-        return
-      }
 
-      if (result.success && result.data) {
-        const savedCustomer = result.data
+        let savedCustomer: Customer
+        if (mode === 'edit' && customer) {
+          savedCustomer = await CustomerApi.update(customer.id, customerData)
+        } else {
+          savedCustomer = await CustomerApi.create(customerData)
+        }
+
         if (selectAfterSave && onSaveAndSelect) {
           onSaveAndSelect(savedCustomer)
         } else {
           onSave(savedCustomer)
         }
 
+        // Improved reset logic for create mode
         if (mode === 'create') {
-          reset()
+          if (resetAfterCreate) {
+            reset() // Reset to empty form
+          } else {
+            // Reset to the saved customer's values (keeps form populated)
+            reset({
+              name: savedCustomer.name,
+              contact_person: savedCustomer.contact_person,
+              email: savedCustomer.email,
+              phone: savedCustomer.phone || '',
+              shipping_address: savedCustomer.shipping_address || '',
+              billing_address: savedCustomer.billing_address || '',
+            })
+          }
         }
-      } else {
-        throw new Error(result.error || 'Failed to save customer')
+      } catch (error) {
+        console.error('Error saving customer:', error)
+
+        if (isApiError(error)) {
+          // Handle validation errors from API
+          if (error.errors) {
+            Object.entries(error.errors).forEach(([field, messages]) => {
+              if (Array.isArray(messages) && messages.length > 0) {
+                setError(field as keyof CustomerFormData, {
+                  type: 'server',
+                  message: messages[0],
+                })
+              }
+            })
+          } else {
+            setSubmitError(error.message)
+          }
+        } else {
+          setSubmitError(error instanceof Error ? error.message : 'Failed to save customer')
+        }
       }
-    } catch (error) {
-      console.error('Error saving customer:', error)
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save customer')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    },
+    [mode, customer, onSave, onSaveAndSelect, reset, resetAfterCreate, setError]
+  )
 
   const onSubmit = (data: CustomerFormData) => {
     handleFormSubmit(data, false)
@@ -329,7 +330,7 @@ export function CustomerForm({
               <Button
                 variant="outlined"
                 onClick={handleSubmit(onSubmitAndSelect)}
-                disabled={loading || isSubmitting || !isDirty}
+                disabled={loading || isSubmitting}
                 startIcon={isSubmitting ? <CircularProgress size={16} /> : undefined}
               >
                 Save & Select
@@ -339,7 +340,7 @@ export function CustomerForm({
             <Button
               variant="contained"
               onClick={handleSubmit(onSubmit)}
-              disabled={loading || isSubmitting || !isDirty}
+              disabled={loading || isSubmitting || (mode === 'edit' && !isDirty)}
               startIcon={isSubmitting ? <CircularProgress size={16} /> : undefined}
             >
               {mode === 'edit' ? 'Update' : 'Save'}
