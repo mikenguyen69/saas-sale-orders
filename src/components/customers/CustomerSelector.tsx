@@ -1,0 +1,288 @@
+'use client'
+
+import React, { useState, useCallback, useMemo } from 'react'
+import {
+  Autocomplete,
+  TextField,
+  Paper,
+  Typography,
+  Box,
+  Button,
+  CircularProgress,
+  Alert,
+  Chip,
+  InputAdornment,
+} from '@mui/material'
+import { Search, PersonAdd } from '@mui/icons-material'
+import { useDebounce } from '@/hooks/useDebounce'
+import { Customer } from '@/types'
+
+interface CustomerSelectorProps {
+  value?: Customer | null
+  onChange: (customer: Customer | null) => void
+  onAddNew?: () => void
+  disabled?: boolean
+  error?: boolean
+  helperText?: string
+  required?: boolean
+  placeholder?: string
+  label?: string
+}
+
+interface CustomerSearchOption {
+  id: string
+  name: string
+  email: string
+  contact_person: string
+  phone?: string
+  shipping_address?: string
+  billing_address?: string
+}
+
+export function CustomerSelector({
+  value,
+  onChange,
+  onAddNew,
+  disabled = false,
+  error = false,
+  helperText,
+  required = false,
+  placeholder = 'Search customers...',
+  label = 'Customer',
+}: CustomerSelectorProps) {
+  const [inputValue, setInputValue] = useState('')
+  const [options, setOptions] = useState<CustomerSearchOption[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const debouncedSearch = useDebounce(inputValue, 300)
+
+  // Search customers function
+  const searchCustomers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setOptions([])
+      return
+    }
+
+    try {
+      setLoading(true)
+      setSearchError(null)
+
+      const response = await fetch(`/api/v1/customers?search=${encodeURIComponent(query)}&limit=10`)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        setOptions(result.data)
+      } else {
+        throw new Error(result.error || 'Failed to search customers')
+      }
+    } catch (error) {
+      console.error('Customer search error:', error)
+      setSearchError(error instanceof Error ? error.message : 'Failed to search customers')
+      setOptions([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Effect to search when debounced search changes
+  React.useEffect(() => {
+    if (open && debouncedSearch) {
+      searchCustomers(debouncedSearch)
+    }
+  }, [debouncedSearch, open, searchCustomers])
+
+  // Load recent customers when opening without search
+  React.useEffect(() => {
+    if (open && !inputValue) {
+      const loadRecentCustomers = async () => {
+        try {
+          setLoading(true)
+          const response = await fetch('/api/v1/customers?limit=5')
+
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.data) {
+              setOptions(result.data)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load recent customers:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      loadRecentCustomers()
+    }
+  }, [open, inputValue])
+
+  // Custom option rendering
+  const renderOption = (
+    props: React.HTMLAttributes<HTMLLIElement>,
+    option: CustomerSearchOption
+  ) => (
+    <li {...props} key={option.id}>
+      <Box sx={{ width: '100%' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            mb: 0.5,
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            {option.name}
+          </Typography>
+          {option.phone && (
+            <Typography variant="caption" color="text.secondary">
+              {option.phone}
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {option.contact_person}
+          </Typography>
+          <Chip label={option.email} size="small" variant="outlined" />
+        </Box>
+
+        {option.shipping_address && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {option.shipping_address.length > 50
+              ? `${option.shipping_address.substring(0, 50)}...`
+              : option.shipping_address}
+          </Typography>
+        )}
+      </Box>
+    </li>
+  )
+
+  // Custom paper component with Add New button
+  const PaperComponent = ({ children, ...props }: React.ComponentProps<typeof Paper>) => (
+    <Paper {...props}>
+      {children}
+      {onAddNew && (
+        <Box sx={{ p: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<PersonAdd />}
+            onClick={onAddNew}
+            size="small"
+          >
+            Add New Customer
+          </Button>
+        </Box>
+      )}
+    </Paper>
+  )
+
+  // No options message
+  const noOptionsText = useMemo(() => {
+    if (loading) return 'Searching...'
+    if (searchError) return `Error: ${searchError}`
+    if (inputValue && options.length === 0) return 'No customers found'
+    return 'Start typing to search customers'
+  }, [loading, searchError, inputValue, options.length])
+
+  // Handle selection change
+  const handleSelectionChange = (
+    event: React.SyntheticEvent,
+    newValue: CustomerSearchOption | null
+  ) => {
+    if (newValue) {
+      // Convert search option back to full Customer object
+      const customer: Customer = {
+        ...newValue,
+        contact_person: newValue.contact_person,
+        tenant_id: '', // Will be populated by backend
+        created_at: '',
+        updated_at: '',
+      }
+      onChange(customer)
+    } else {
+      onChange(null)
+    }
+  }
+
+  return (
+    <Box>
+      <Autocomplete
+        value={
+          value
+            ? {
+                id: value.id,
+                name: value.name,
+                email: value.email,
+                contact_person: value.contact_person,
+                phone: value.phone,
+                shipping_address: value.shipping_address,
+                billing_address: value.billing_address,
+              }
+            : null
+        }
+        onChange={handleSelectionChange}
+        inputValue={inputValue}
+        onInputChange={(event, newInputValue) => {
+          setInputValue(newInputValue)
+        }}
+        options={options}
+        loading={loading}
+        open={open}
+        onOpen={() => setOpen(true)}
+        onClose={() => setOpen(false)}
+        getOptionLabel={option => option.name}
+        isOptionEqualToValue={(option, value) => option.id === value.id}
+        filterOptions={x => x} // Disable built-in filtering since we handle it server-side
+        renderInput={params => (
+          <TextField
+            {...params}
+            label={label}
+            placeholder={placeholder}
+            error={error}
+            helperText={helperText}
+            required={required}
+            disabled={disabled}
+            InputProps={{
+              ...params.InputProps,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <React.Fragment>
+                  {loading ? <CircularProgress size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </React.Fragment>
+              ),
+            }}
+          />
+        )}
+        renderOption={renderOption}
+        PaperComponent={onAddNew ? PaperComponent : undefined}
+        noOptionsText={noOptionsText}
+        clearOnBlur={false}
+        selectOnFocus
+        handleHomeEndKeys
+        freeSolo={false}
+        disabled={disabled}
+      />
+
+      {searchError && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {searchError}
+        </Alert>
+      )}
+    </Box>
+  )
+}
