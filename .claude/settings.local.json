@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(timeout 10s npm test -- --testPathPattern=useDebounce.test.ts)"
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
