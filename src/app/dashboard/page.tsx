@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { Typography, Grid, Card, CardContent, Box, CircularProgress, Alert } from '@mui/material'
 import { Receipt, Inventory, People, TrendingUp } from '@mui/icons-material'
 import { useDashboardStats, useRecentOrders, useLowStockProducts } from '@/hooks/useDashboard'
+import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats()
@@ -84,6 +85,10 @@ export default function DashboardPage() {
           )
         })}
       </Grid>
+
+      <Box sx={{ mt: 4, mb: 2 }}>
+        <AnalyticsDashboard />
+      </Box>
 
       <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 2 }}>
         Quick Actions
