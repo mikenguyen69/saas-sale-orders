@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -62,7 +62,7 @@ describe('Customer-Order Workflow Integration', () => {
     })
   })
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </QueryClientProvider>
@@ -74,9 +74,9 @@ describe('Customer-Order Workflow Integration', () => {
       const handleChange = jest.fn()
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} />
-        </wrapper>
+        </Wrapper>
       )
 
       // Open dropdown
@@ -121,9 +121,9 @@ describe('Customer-Order Workflow Integration', () => {
       })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -141,9 +141,9 @@ describe('Customer-Order Workflow Integration', () => {
       const handleChange = jest.fn()
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} value={mockCustomers[0]} />
-        </wrapper>
+        </Wrapper>
       )
 
       const clearButton = screen.getByTitle('Clear')
@@ -160,9 +160,9 @@ describe('Customer-Order Workflow Integration', () => {
       const handleAddNew = jest.fn()
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} onAddNew={handleAddNew} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -200,9 +200,9 @@ describe('Customer-Order Workflow Integration', () => {
       })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerModal open={true} onClose={handleClose} onSave={handleSave} />
-        </wrapper>
+        </Wrapper>
       )
 
       // Fill in customer form
@@ -216,11 +216,13 @@ describe('Customer-Order Workflow Integration', () => {
       await user.click(saveButton)
 
       await waitFor(() => {
-        expect(handleSave).toHaveBeenCalledWith(expect.objectContaining({
-          name: 'New Company',
-          contact_person: 'Bob Wilson',
-          email: 'bob@newcompany.com',
-        }))
+        expect(handleSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'New Company',
+            contact_person: 'Bob Wilson',
+            email: 'bob@newcompany.com',
+          })
+        )
       })
     })
   })
@@ -231,9 +233,9 @@ describe('Customer-Order Workflow Integration', () => {
       const handleChange = jest.fn()
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -264,9 +266,9 @@ describe('Customer-Order Workflow Integration', () => {
       ;(global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={jest.fn()} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -295,9 +297,9 @@ describe('Customer-Order Workflow Integration', () => {
       })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerModal open={true} onClose={handleClose} onSave={handleSave} />
-        </wrapper>
+        </Wrapper>
       )
 
       await user.type(screen.getByLabelText(/customer name/i), 'Test Company')
@@ -327,9 +329,9 @@ describe('Customer-Order Workflow Integration', () => {
       })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={jest.fn()} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -351,9 +353,9 @@ describe('Customer-Order Workflow Integration', () => {
       const user = userEvent.setup({ delay: null })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={jest.fn()} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -362,8 +364,8 @@ describe('Customer-Order Workflow Integration', () => {
 
       await waitFor(
         () => {
-          const searchCalls = (global.fetch as jest.Mock).mock.calls.filter(
-            (call: string[]) => call[0].includes('search=')
+          const searchCalls = (global.fetch as jest.Mock).mock.calls.filter((call: string[]) =>
+            call[0].includes('search=')
           )
           // Should have minimal calls due to debouncing
           expect(searchCalls.length).toBeLessThanOrEqual(2)
@@ -376,9 +378,9 @@ describe('Customer-Order Workflow Integration', () => {
       const user = userEvent.setup({ delay: null })
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={jest.fn()} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -386,8 +388,8 @@ describe('Customer-Order Workflow Integration', () => {
       await user.type(input, 'test')
 
       await waitFor(() => {
-        const callsWithLimit = (global.fetch as jest.Mock).mock.calls.filter(
-          (call: string[]) => call[0].includes('limit=10')
+        const callsWithLimit = (global.fetch as jest.Mock).mock.calls.filter((call: string[]) =>
+          call[0].includes('limit=10')
         )
         expect(callsWithLimit.length).toBeGreaterThan(0)
       })
@@ -400,9 +402,9 @@ describe('Customer-Order Workflow Integration', () => {
       const handleChange = jest.fn()
 
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={handleChange} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
@@ -417,9 +419,9 @@ describe('Customer-Order Workflow Integration', () => {
 
     it('has proper ARIA labels and roles', async () => {
       render(
-        <wrapper>
+        <Wrapper>
           <CustomerSelector onChange={jest.fn()} />
-        </wrapper>
+        </Wrapper>
       )
 
       const input = screen.getByLabelText('Customer')
