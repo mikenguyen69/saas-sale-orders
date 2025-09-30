@@ -22,12 +22,12 @@ import { Delete, Add } from '@mui/icons-material'
 import { FileUpload } from '@/components/ui/FileUpload'
 import { useCreateOrder, useUpdateOrder, useSubmitOrder } from '@/hooks/useOrders'
 import { ProductSelector } from './ProductSelector'
-import type { SaleOrder, OrderItem, Product } from '@/types'
+import { CustomerSelector } from '@/components/customers/CustomerSelector'
+import { CustomerModal } from '@/components/customers/CustomerModal'
+import type { SaleOrder, OrderItem, Product, Customer } from '@/types'
 
 const orderSchema = yup.object({
-  customer_name: yup.string().required('Customer name is required'),
-  contact_person: yup.string().required('Contact person is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  customer_id: yup.string().required('Customer is required'),
   shipping_address: yup.string(),
   delivery_date: yup.string(),
   notes: yup.string(),
@@ -62,6 +62,8 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>(
     order?.attachments?.map(attachment => attachment.file_url) || []
   )
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(order?.customer || null)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
 
   const createOrderMutation = useCreateOrder()
   const updateOrderMutation = useUpdateOrder()
@@ -72,13 +74,12 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<OrderFormData>({
     resolver: yupResolver(orderSchema),
     defaultValues: order
       ? {
-          customer_name: order.customer_name,
-          contact_person: order.contact_person,
-          email: order.email,
+          customer_id: order.customer_id || '',
           shipping_address: order.shipping_address || '',
           delivery_date: order.delivery_date || '',
           notes: order.notes || '',
@@ -89,6 +90,27 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const calculateTotal = useCallback(() => {
     return orderItems.reduce((total, item) => total + (item.line_total || 0), 0)
   }, [orderItems])
+
+  const handleCustomerChange = (customer: Customer | null) => {
+    setSelectedCustomer(customer)
+    if (customer) {
+      setValue('customer_id', customer.id)
+      // Auto-fill shipping address if customer has one
+      if (customer.shipping_address && !watch('shipping_address')) {
+        setValue('shipping_address', customer.shipping_address)
+      }
+    } else {
+      setValue('customer_id', '')
+    }
+  }
+
+  const handleCustomerSaved = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setValue('customer_id', customer.id)
+    if (customer.shipping_address && !watch('shipping_address')) {
+      setValue('shipping_address', customer.shipping_address)
+    }
+  }
 
   const handleAddProduct = (product: Product) => {
     const existingItemIndex = orderItems.findIndex(item => item.product_id === product.id)
@@ -215,9 +237,14 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   }, [])
 
   const onSubmit = async (data: OrderFormData) => {
+    if (!data.customer_id) {
+      console.error('Customer is required')
+      return
+    }
+
     try {
       const orderData = {
-        ...data,
+        customer_id: data.customer_id,
         notes: data.notes || '',
         shipping_address: data.shipping_address || '',
         delivery_date: data.delivery_date || '',
@@ -250,8 +277,14 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     if (!order?.id) {
       // Save first, then submit
       const data = watch()
+
+      if (!data.customer_id) {
+        console.error('Customer is required')
+        return
+      }
+
       const orderData = {
-        ...data,
+        customer_id: data.customer_id,
         notes: data.notes || '',
         shipping_address: data.shipping_address || '',
         delivery_date: data.delivery_date || '',
@@ -291,39 +324,47 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
             </Typography>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('customer_name')}
-                  label="Customer Name"
-                  fullWidth
-                  error={!!errors.customer_name}
-                  helperText={errors.customer_name?.message}
+              <Grid item xs={12}>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={handleCustomerChange}
+                  onAddNew={() => setShowCustomerModal(true)}
+                  error={!!errors.customer_id}
+                  helperText={errors.customer_id?.message}
                   disabled={isLoading}
+                  required
+                  label="Customer"
+                  placeholder="Search and select a customer..."
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('contact_person')}
-                  label="Contact Person"
-                  fullWidth
-                  error={!!errors.contact_person}
-                  helperText={errors.contact_person?.message}
-                  disabled={isLoading}
-                />
-              </Grid>
+              {selectedCustomer && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Contact Person"
+                      value={selectedCustomer.contact_person}
+                      fullWidth
+                      disabled
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+                  </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('email')}
-                  label="Email"
-                  type="email"
-                  fullWidth
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  disabled={isLoading}
-                />
-              </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Email"
+                      value={selectedCustomer.email}
+                      fullWidth
+                      disabled
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+                  </Grid>
+                </>
+              )}
 
               <Grid item xs={12} md={6}>
                 <TextField
@@ -468,6 +509,14 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
         open={showProductSelector}
         onClose={() => setShowProductSelector(false)}
         onSelect={handleAddProduct}
+      />
+
+      <CustomerModal
+        open={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onSave={handleCustomerSaved}
+        onSaveAndSelect={handleCustomerSaved}
+        mode="create"
       />
     </Box>
   )
