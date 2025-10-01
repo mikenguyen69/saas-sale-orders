@@ -1,6 +1,15 @@
 export type UserRole = 'salesperson' | 'manager' | 'warehouse'
 
-export type OrderStatus = 'draft' | 'submitted' | 'approved' | 'fulfilled' | 'rejected'
+export type OrderStatus =
+  | 'draft'
+  | 'submitted'
+  | 'approved'
+  | 'packing'
+  | 'packed'
+  | 'shipped'
+  | 'delivered'
+  | 'fulfilled'
+  | 'rejected'
 
 export type LineStatus = 'pending' | 'fulfilled' | 'backordered'
 

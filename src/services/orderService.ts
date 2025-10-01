@@ -152,7 +152,7 @@ export class OrderService {
       })
 
       if (!order) throw new Error('Order not found')
-      if (order.status !== 'approved') throw new Error('Only approved orders can be fulfilled')
+      if (order.status !== 'delivered') throw new Error('Only delivered orders can be fulfilled')
 
       // Deduct stock quantities
       for (const item of order.orderItems) {
@@ -184,7 +184,7 @@ export class OrderService {
       await tx.orderStatusHistory.create({
         data: {
           orderId: id,
-          previousStatus: 'approved',
+          previousStatus: 'delivered',
           newStatus: 'fulfilled',
           changedBy: userId,
         },
@@ -214,6 +214,113 @@ export class OrderService {
         orderId: id,
         previousStatus: 'submitted',
         newStatus: 'rejected',
+        changedBy: userId,
+      },
+    })
+
+    return updatedOrder
+  }
+
+  static async startPackingOrder(id: string, userId: string, userRole: UserRole) {
+    if (userRole !== 'warehouse') throw new Error('Only warehouse staff can start packing orders')
+
+    const order = await prisma.saleOrder.findUnique({ where: { id } })
+    if (!order) throw new Error('Order not found')
+    if (order.status !== 'approved') throw new Error('Only approved orders can be moved to packing')
+
+    const updatedOrder = await prisma.saleOrder.update({
+      where: { id },
+      data: {
+        status: 'packing',
+        warehouseId: userId,
+      },
+    })
+
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        previousStatus: 'approved',
+        newStatus: 'packing',
+        changedBy: userId,
+      },
+    })
+
+    return updatedOrder
+  }
+
+  static async markOrderPacked(id: string, userId: string, userRole: UserRole) {
+    if (userRole !== 'warehouse') throw new Error('Only warehouse staff can mark orders as packed')
+
+    const order = await prisma.saleOrder.findUnique({ where: { id } })
+    if (!order) throw new Error('Order not found')
+    if (order.status !== 'packing') throw new Error('Only packing orders can be marked as packed')
+
+    const updatedOrder = await prisma.saleOrder.update({
+      where: { id },
+      data: {
+        status: 'packed',
+      },
+    })
+
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        previousStatus: 'packing',
+        newStatus: 'packed',
+        changedBy: userId,
+      },
+    })
+
+    return updatedOrder
+  }
+
+  static async markOrderShipped(id: string, userId: string, userRole: UserRole) {
+    if (userRole !== 'warehouse') throw new Error('Only warehouse staff can mark orders as shipped')
+
+    const order = await prisma.saleOrder.findUnique({ where: { id } })
+    if (!order) throw new Error('Order not found')
+    if (order.status !== 'packed') throw new Error('Only packed orders can be marked as shipped')
+
+    const updatedOrder = await prisma.saleOrder.update({
+      where: { id },
+      data: {
+        status: 'shipped',
+      },
+    })
+
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        previousStatus: 'packed',
+        newStatus: 'shipped',
+        changedBy: userId,
+      },
+    })
+
+    return updatedOrder
+  }
+
+  static async markOrderDelivered(id: string, userId: string, userRole: UserRole) {
+    if (userRole !== 'warehouse')
+      throw new Error('Only warehouse staff can mark orders as delivered')
+
+    const order = await prisma.saleOrder.findUnique({ where: { id } })
+    if (!order) throw new Error('Order not found')
+    if (order.status !== 'shipped')
+      throw new Error('Only shipped orders can be marked as delivered')
+
+    const updatedOrder = await prisma.saleOrder.update({
+      where: { id },
+      data: {
+        status: 'delivered',
+      },
+    })
+
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        previousStatus: 'shipped',
+        newStatus: 'delivered',
         changedBy: userId,
       },
     })

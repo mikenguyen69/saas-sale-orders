@@ -21,6 +21,10 @@ enum OrderStatus {
   draft
   submitted
   approved
+  packing
+  packed
+  shipped
+  delivered
   fulfilled
   rejected
 }

@@ -32,6 +32,10 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'submitted', label: 'Submitted' },
   { value: 'approved', label: 'Approved' },
+  { value: 'packing', label: 'Packing' },
+  { value: 'packed', label: 'Packed' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'delivered', label: 'Delivered' },
   { value: 'fulfilled', label: 'Fulfilled' },
   { value: 'rejected', label: 'Rejected' },
 ]
@@ -48,13 +52,34 @@ export function OrderFilters({ filters, onFiltersChange, userRole }: OrderFilter
   // Filter status options based on user role
   const availableStatuses = statusOptions.filter(option => {
     if (userRole === 'salesperson') {
-      return ['draft', 'submitted', 'approved', 'fulfilled', 'rejected'].includes(option.value)
+      return [
+        'draft',
+        'submitted',
+        'approved',
+        'packing',
+        'packed',
+        'shipped',
+        'delivered',
+        'fulfilled',
+        'rejected',
+      ].includes(option.value)
     }
     if (userRole === 'manager') {
-      return ['submitted', 'approved', 'rejected', 'fulfilled'].includes(option.value)
+      return [
+        'submitted',
+        'approved',
+        'rejected',
+        'packing',
+        'packed',
+        'shipped',
+        'delivered',
+        'fulfilled',
+      ].includes(option.value)
     }
     if (userRole === 'warehouse') {
-      return ['approved', 'fulfilled'].includes(option.value)
+      return ['approved', 'packing', 'packed', 'shipped', 'delivered', 'fulfilled'].includes(
+        option.value
+      )
     }
     return true
   })

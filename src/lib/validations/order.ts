@@ -44,7 +44,19 @@ export const UpdateOrderSchema = z.object({
 })
 
 export const OrderQuerySchema = z.object({
-  status: z.enum(['draft', 'submitted', 'approved', 'fulfilled', 'rejected']).optional(),
+  status: z
+    .enum([
+      'draft',
+      'submitted',
+      'approved',
+      'packing',
+      'packed',
+      'shipped',
+      'delivered',
+      'fulfilled',
+      'rejected',
+    ])
+    .optional(),
   salesperson_id: z.string().uuid().optional(),
   customer_id: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),

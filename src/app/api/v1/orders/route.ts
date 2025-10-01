@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (query.status) {
-      queryBuilder = queryBuilder.eq('status', query.status)
+      queryBuilder = queryBuilder.eq('status', query.status as any)
     }
 
     if (query.salesperson_id) {
