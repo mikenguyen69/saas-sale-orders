@@ -25,7 +25,8 @@ A comprehensive sales order management system built with Next.js, Supabase, and 
 
 - Node.js 18+
 - npm or yarn
-- Supabase account
+- Docker Desktop (for local Supabase)
+- Supabase CLI (installed via npm)
 
 ### Installation
 
@@ -42,27 +43,54 @@ cd saas-sale-orders
 npm install
 ```
 
-3. Set up environment variables:
+3. **Start Local Supabase (IMPORTANT)**:
+
+**For local development, you MUST start the local Supabase instance. This is the most common cause of database connection errors.**
 
 ```bash
-cp .env.local.example .env.local
+# Start local Supabase with Docker
+npm run db:start
 ```
 
-Fill in your Supabase credentials and other environment variables.
+This will start a local Supabase instance on your machine. Wait for all services to be ready (you'll see status output).
 
-4. Generate Prisma client:
+**Common Issues:**
+
+- If you get "Docker not found" errors, ensure Docker Desktop is installed and running
+- On Windows, make sure Docker Desktop is running before executing this command
+- The local database will be available at `postgresql://postgres:postgres@localhost:54322/postgres`
+
+4. Set up environment variables:
+
+**For Local Development**, create `.env.local`:
+
+```bash
+# Local Supabase (automatically configured when you run db:start)
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<get-from-supabase-status>
+DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
+DIRECT_URL=postgresql://postgres:postgres@localhost:54322/postgres
+```
+
+Run `npx supabase status` to get your local Supabase credentials.
+
+**For Production**, use the `.env.local` file with production Supabase credentials (see `.env` for reference).
+
+5. Generate Prisma client:
 
 ```bash
 npx prisma generate
 ```
 
-5. Run database migrations (when available):
+6. Reset database with seed data:
 
 ```bash
-npx prisma db push
+npm run db:reset
 ```
 
-6. Start the development server:
+This will apply migrations and seed the database with test users and data.
+
+7. Start the development server:
 
 ```bash
 npm run dev
@@ -70,16 +98,45 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Troubleshooting Database Connection Errors
+
+If you encounter errors like:
+
+```
+Can't reach database server at db.xxx.supabase.co:5432
+```
+
+**Solution:**
+
+1. Ensure Docker Desktop is running
+2. Start local Supabase: `npm run db:start`
+3. Verify Supabase is running: `npx supabase status`
+4. Update `.env.local` to use local database URL (see step 4 above)
+5. Restart your development server: `npm run dev`
+
 ## Available Scripts
+
+### Development
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
+
+### Database
+
+- `npm run db:start` - Start local Supabase instance (Docker required)
+- `npm run db:stop` - Stop local Supabase instance
+- `npm run db:reset` - Reset database and apply migrations with seed data
+
+### Code Quality
+
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint errors
 - `npm run format` - Format code with Prettier
 - `npm run type-check` - Run TypeScript type checking
 - `npm run test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Generate test coverage report
 
 ## Project Structure
 
