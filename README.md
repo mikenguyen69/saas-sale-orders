@@ -45,14 +45,14 @@ npm install
 
 3. **Start Local Supabase (IMPORTANT)**:
 
-**For local development, you MUST start the local Supabase instance. This is the most common cause of database connection errors.**
+**For local development, you MUST start the local Supabase instance.**
 
 ```bash
 # Start local Supabase with Docker
 npm run db:start
 ```
 
-This will start a local Supabase instance on your machine. Wait for all services to be ready (you'll see status output).
+This will start a local Supabase instance on your machine. Wait for all services to be ready.
 
 **Common Issues:**
 
@@ -60,21 +60,20 @@ This will start a local Supabase instance on your machine. Wait for all services
 - On Windows, make sure Docker Desktop is running before executing this command
 - The local database will be available at `postgresql://postgres:postgres@localhost:54322/postgres`
 
-4. Set up environment variables:
+4. **Configure environment variables**:
 
-**For Local Development**, create `.env.local`:
+The `.env.local` file should already be configured for local development with these values:
 
 ```bash
-# Local Supabase (automatically configured when you run db:start)
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<get-from-supabase-status>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
 DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 DIRECT_URL=postgresql://postgres:postgres@localhost:54322/postgres
 ```
 
-Run `npx supabase status` to get your local Supabase credentials.
+These are the default local Supabase credentials. **Do not change these for local development.**
 
-**For Production**, use the `.env.local` file with production Supabase credentials (see `.env` for reference).
+**For Production**, use the credentials from your production Supabase project (see `.env` for reference).
 
 5. Generate Prisma client:
 
