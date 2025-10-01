@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prisma, withDatabaseErrorHandling } from '@/lib/prisma'
 
 export interface CreateCustomerData {
   name: string
@@ -170,79 +170,83 @@ export class CustomerService {
   }
 
   static async listCustomers(userId: string, options: CustomerQueryOptions = {}) {
-    const { search, page = 1, limit = 20 } = options
-    const offset = (page - 1) * limit
+    return withDatabaseErrorHandling(async () => {
+      const { search, page = 1, limit = 20 } = options
+      const offset = (page - 1) * limit
 
-    const whereClause = {
-      createdBy: userId,
-      deletedAt: null,
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' as const } },
-          { email: { contains: search, mode: 'insensitive' as const } },
-          { contactPerson: { contains: search, mode: 'insensitive' as const } },
-        ],
-      }),
-    }
+      const whereClause = {
+        createdBy: userId,
+        deletedAt: null,
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+            { contactPerson: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }),
+      }
 
-    const [customers, totalCount] = await Promise.all([
-      prisma.customer.findMany({
-        where: whereClause,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+      const [customers, totalCount] = await Promise.all([
+        prisma.customer.findMany({
+          where: whereClause,
+          include: {
+            creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            _count: {
+              select: {
+                saleOrders: true,
+              },
             },
           },
-          _count: {
-            select: {
-              saleOrders: true,
-            },
-          },
+          orderBy: [{ name: 'asc' }, { createdAt: 'desc' }],
+          skip: offset,
+          take: limit,
+        }),
+        prisma.customer.count({ where: whereClause }),
+      ])
+
+      const totalPages = Math.ceil(totalCount / limit)
+
+      return {
+        customers,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrevious: page > 1,
         },
-        orderBy: [{ name: 'asc' }, { createdAt: 'desc' }],
-        skip: offset,
-        take: limit,
-      }),
-      prisma.customer.count({ where: whereClause }),
-    ])
-
-    const totalPages = Math.ceil(totalCount / limit)
-
-    return {
-      customers,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrevious: page > 1,
-      },
-    }
+      }
+    })
   }
 
   static async searchCustomers(query: string, userId: string) {
-    return prisma.customer.findMany({
-      where: {
-        createdBy: userId,
-        deletedAt: null,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { contactPerson: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        contactPerson: true,
-      },
-      orderBy: { name: 'asc' },
-      take: 10, // Limit search results for performance
+    return withDatabaseErrorHandling(async () => {
+      return prisma.customer.findMany({
+        where: {
+          createdBy: userId,
+          deletedAt: null,
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+            { contactPerson: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          contactPerson: true,
+        },
+        orderBy: { name: 'asc' },
+        take: 10, // Limit search results for performance
+      })
     })
   }
 }
