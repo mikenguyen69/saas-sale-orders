@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")"
+      "Bash(dos2unix:*)"
     ],
     "deny": [],
     "ask": []

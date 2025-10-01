@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { Search, PersonAdd } from '@mui/icons-material'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useApiCall } from '@/hooks/useApiCall'
 import { Customer } from '@/types'
 
 interface CustomerSelectorProps {
@@ -56,40 +57,42 @@ export function CustomerSelector({
   const [searchError, setSearchError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
 
+  const { callApi } = useApiCall()
   const debouncedSearch = useDebounce(inputValue, 300)
 
   // Search customers function
-  const searchCustomers = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setOptions([])
-      return
-    }
-
-    try {
-      setLoading(true)
-      setSearchError(null)
-
-      const response = await fetch(`/api/v1/customers?search=${encodeURIComponent(query)}&limit=10`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+  const searchCustomers = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setOptions([])
+        return
       }
 
-      const result = await response.json()
+      try {
+        setLoading(true)
+        setSearchError(null)
 
-      if (result.success && result.data) {
-        setOptions(result.data)
-      } else {
-        throw new Error(result.error || 'Failed to search customers')
+        const result = await callApi<{ success: boolean; data: CustomerSearchOption[] }>(
+          `/api/v1/customers?search=${encodeURIComponent(query)}&limit=10`,
+          {},
+          { showLoading: false, showErrorNotification: false }
+        )
+
+        if (result.success && result.data) {
+          setOptions(result.data)
+        } else {
+          throw new Error('Failed to search customers')
+        }
+      } catch (error) {
+        console.error('Customer search error:', error)
+        setSearchError(error instanceof Error ? error.message : 'Failed to search customers')
+        setOptions([])
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Customer search error:', error)
-      setSearchError(error instanceof Error ? error.message : 'Failed to search customers')
-      setOptions([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    },
+    [callApi]
+  )
 
   // Effect to search when debounced search changes
   React.useEffect(() => {
@@ -104,13 +107,14 @@ export function CustomerSelector({
       const loadRecentCustomers = async () => {
         try {
           setLoading(true)
-          const response = await fetch('/api/v1/customers?limit=5')
+          const result = await callApi<{ success: boolean; data: CustomerSearchOption[] }>(
+            '/api/v1/customers?limit=5',
+            {},
+            { showLoading: false, showErrorNotification: false }
+          )
 
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success && result.data) {
-              setOptions(result.data)
-            }
+          if (result.success && result.data) {
+            setOptions(result.data)
           }
         } catch (error) {
           console.error('Failed to load recent customers:', error)
@@ -121,7 +125,7 @@ export function CustomerSelector({
 
       loadRecentCustomers()
     }
-  }, [open, inputValue])
+  }, [open, inputValue, callApi])
 
   // Custom option rendering
   const renderOption = (
