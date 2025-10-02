@@ -27,6 +27,10 @@ const statusColors = {
   draft: 'default',
   submitted: 'warning',
   approved: 'success',
+  packing: 'primary',
+  packed: 'secondary',
+  shipped: 'info',
+  delivered: 'success',
   fulfilled: 'info',
   rejected: 'error',
 } as const
