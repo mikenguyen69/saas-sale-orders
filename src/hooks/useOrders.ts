@@ -26,9 +26,7 @@ export interface OrdersResponse {
 }
 
 export interface CreateOrderData {
-  customer_name: string
-  contact_person: string
-  email: string
+  customer_id: string
   shipping_address?: string
   delivery_date?: string
   notes: string

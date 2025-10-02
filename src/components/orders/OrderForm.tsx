@@ -64,6 +64,8 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>(
     order?.attachments?.map(attachment => attachment.file_url) || []
   )
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(order?.customer || null)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
 
   const createOrderMutation = useCreateOrder()
   const updateOrderMutation = useUpdateOrder()
@@ -111,6 +113,27 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   const calculateTotal = useCallback(() => {
     return orderItems.reduce((total, item) => total + (item.line_total || 0), 0)
   }, [orderItems])
+
+  const handleCustomerChange = (customer: Customer | null) => {
+    setSelectedCustomer(customer)
+    if (customer) {
+      setValue('customer_id', customer.id)
+      // Auto-fill shipping address if customer has one
+      if (customer.shipping_address && !watch('shipping_address')) {
+        setValue('shipping_address', customer.shipping_address)
+      }
+    } else {
+      setValue('customer_id', '')
+    }
+  }
+
+  const handleCustomerSaved = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setValue('customer_id', customer.id)
+    if (customer.shipping_address && !watch('shipping_address')) {
+      setValue('shipping_address', customer.shipping_address)
+    }
+  }
 
   const handleAddProduct = (product: Product) => {
     const existingItemIndex = orderItems.findIndex(item => item.product_id === product.id)
@@ -237,6 +260,11 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   }, [])
 
   const onSubmit = async (data: OrderFormData) => {
+    if (!data.customer_id) {
+      console.error('Customer is required')
+      return
+    }
+
     try {
       if (!selectedCustomer) {
         console.error('No customer selected')
@@ -285,6 +313,12 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     if (!order?.id) {
       // Save first, then submit
       const data = watch()
+
+      if (!data.customer_id) {
+        console.error('Customer is required')
+        return
+      }
+
       const orderData = {
         customer_id: data.customer_id,
         customer_name: selectedCustomer.name,

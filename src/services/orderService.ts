@@ -6,6 +6,7 @@ export class OrderService {
   static async createOrder(data: Record<string, unknown>, userId: string) {
     return prisma.saleOrder.create({
       data: {
+        customerId: data.customerId as string | null,
         customerName: data.customerName as string,
         contactPerson: data.contactPerson as string,
         email: data.email as string,
@@ -22,12 +23,14 @@ export class OrderService {
           },
         },
         salesperson: true,
+        customer: true,
       },
     })
   }
 
   static async updateOrder(id: string, data: Record<string, unknown>, _userId: string) {
     const updateData: Record<string, unknown> = {}
+    if (data.customerId !== undefined) updateData.customerId = data.customerId as string | null
     if (data.customerName) updateData.customerName = data.customerName as string
     if (data.contactPerson) updateData.contactPerson = data.contactPerson as string
     if (data.email) updateData.email = data.email as string
@@ -48,6 +51,7 @@ export class OrderService {
         salesperson: true,
         manager: true,
         warehouseStaff: true,
+        customer: true,
       },
     })
   }

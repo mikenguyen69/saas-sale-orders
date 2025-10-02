@@ -44,8 +44,9 @@ export function CustomerSelector({
   const [inputValue, setInputValue] = useState('')
   const [open, setOpen] = useState(false)
 
+  const { callApi } = useApiCall()
   const debouncedSearch = useDebounce(inputValue, 300)
-
+  
   // Use the proper hook for customer search with authentication
   const {
     data: searchResult,
