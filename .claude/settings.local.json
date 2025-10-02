@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run lint:*)"
+      "Bash(echo \"- sb-<project-ref>-auth-token\")"
     ],
     "deny": [],
     "ask": []

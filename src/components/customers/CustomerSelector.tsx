@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Autocomplete,
   TextField,
@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { Search, PersonAdd } from '@mui/icons-material'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useCustomers } from '@/hooks/useCustomers'
 import { Customer } from '@/types'
 
 interface CustomerSelectorProps {
@@ -29,16 +30,6 @@ interface CustomerSelectorProps {
   label?: string
 }
 
-interface CustomerSearchOption {
-  id: string
-  name: string
-  email: string
-  contact_person: string
-  phone?: string
-  shipping_address?: string
-  billing_address?: string
-}
-
 export function CustomerSelector({
   value,
   onChange,
@@ -51,83 +42,37 @@ export function CustomerSelector({
   label = 'Customer',
 }: CustomerSelectorProps) {
   const [inputValue, setInputValue] = useState('')
-  const [options, setOptions] = useState<CustomerSearchOption[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
 
   const debouncedSearch = useDebounce(inputValue, 300)
 
-  // Search customers function
-  const searchCustomers = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setOptions([])
-      return
-    }
+  // Use the proper hook for customer search with authentication
+  const {
+    data: searchResult,
+    isLoading: loading,
+    error: queryError,
+  } = useCustomers(
+    {
+      search: debouncedSearch || undefined,
+      limit: debouncedSearch ? 10 : 5,
+    },
+    open // Only fetch when dropdown is open
+  )
 
-    try {
-      setLoading(true)
-      setSearchError(null)
+  const options = useMemo(() => {
+    return searchResult?.data || []
+  }, [searchResult])
 
-      const response = await fetch(`/api/v1/customers?search=${encodeURIComponent(query)}&limit=10`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      if (result.success && result.data) {
-        setOptions(result.data)
-      } else {
-        throw new Error(result.error || 'Failed to search customers')
-      }
-    } catch (error) {
-      console.error('Customer search error:', error)
-      setSearchError(error instanceof Error ? error.message : 'Failed to search customers')
-      setOptions([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Effect to search when debounced search changes
-  React.useEffect(() => {
-    if (open && debouncedSearch) {
-      searchCustomers(debouncedSearch)
-    }
-  }, [debouncedSearch, open, searchCustomers])
-
-  // Load recent customers when opening without search
-  React.useEffect(() => {
-    if (open && !inputValue) {
-      const loadRecentCustomers = async () => {
-        try {
-          setLoading(true)
-          const response = await fetch('/api/v1/customers?limit=5')
-
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success && result.data) {
-              setOptions(result.data)
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load recent customers:', error)
-        } finally {
-          setLoading(false)
-        }
-      }
-
-      loadRecentCustomers()
-    }
-  }, [open, inputValue])
+  const searchError = useMemo(() => {
+    return queryError
+      ? queryError instanceof Error
+        ? queryError.message
+        : 'Failed to load customers'
+      : null
+  }, [queryError])
 
   // Custom option rendering
-  const renderOption = (
-    props: React.HTMLAttributes<HTMLLIElement>,
-    option: CustomerSearchOption
-  ) => (
+  const renderOption = (props: React.HTMLAttributes<HTMLLIElement>, option: Customer) => (
     <li {...props} key={option.id}>
       <Box sx={{ width: '100%' }}>
         <Box
@@ -176,7 +121,15 @@ export function CustomerSelector({
             fullWidth
             variant="outlined"
             startIcon={<PersonAdd />}
-            onClick={onAddNew}
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              onAddNew()
+            }}
+            onMouseDown={e => {
+              // Prevent Autocomplete from closing when clicking the button
+              e.preventDefault()
+            }}
             size="small"
           >
             Add New Customer
@@ -195,41 +148,14 @@ export function CustomerSelector({
   }, [loading, searchError, inputValue, options.length])
 
   // Handle selection change
-  const handleSelectionChange = (
-    event: React.SyntheticEvent,
-    newValue: CustomerSearchOption | null
-  ) => {
-    if (newValue) {
-      // Convert search option back to full Customer object
-      const customer: Customer = {
-        ...newValue,
-        contact_person: newValue.contact_person,
-        tenant_id: '', // Will be populated by backend
-        created_at: '',
-        updated_at: '',
-      }
-      onChange(customer)
-    } else {
-      onChange(null)
-    }
+  const handleSelectionChange = (event: React.SyntheticEvent, newValue: Customer | null) => {
+    onChange(newValue)
   }
 
   return (
     <Box>
       <Autocomplete
-        value={
-          value
-            ? {
-                id: value.id,
-                name: value.name,
-                email: value.email,
-                contact_person: value.contact_person,
-                phone: value.phone,
-                shipping_address: value.shipping_address,
-                billing_address: value.billing_address,
-              }
-            : null
-        }
+        value={value || null}
         onChange={handleSelectionChange}
         inputValue={inputValue}
         onInputChange={(event, newInputValue) => {

@@ -9,7 +9,6 @@ import {
   ApiError,
 } from '@/lib/api-utils'
 import { CreateCustomerSchema, CustomerQuerySchema } from '@/lib/validations/customer'
-import { CustomerService } from '@/services/customerService'
 
 /**
  * @swagger
@@ -80,7 +79,7 @@ import { CustomerService } from '@/services/customerService'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userDetails } = await getAuthenticatedUser(request)
+    const { userDetails, supabase } = await getAuthenticatedUser(request)
     const query = await validateQuery(request, CustomerQuerySchema)
 
     // Only salespeople and managers can access customers
@@ -88,18 +87,33 @@ export async function GET(request: NextRequest) {
       throw new ApiError(403, 'Access denied. Only salespeople and managers can access customers.')
     }
 
-    const result = await CustomerService.listCustomers(userDetails.id, {
-      search: query.search,
-      page: query.page,
-      limit: query.limit,
-    })
+    // Build query with filters
+    let queryBuilder = supabase.from('customers').select('*', { count: 'exact' })
 
-    return createPaginatedResponse(
-      result.customers,
-      result.pagination.page,
-      result.pagination.limit,
-      result.pagination.total
-    )
+    // Apply base filters - RLS policy now allows all users to view customers
+    queryBuilder = queryBuilder.is('deleted_at', null)
+
+    // Apply search filter
+    if (query.search) {
+      queryBuilder = queryBuilder.or(
+        `name.ilike.%${query.search}%,email.ilike.%${query.search}%,contact_person.ilike.%${query.search}%`
+      )
+    }
+
+    // Apply pagination
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+    const offset = (page - 1) * limit
+    queryBuilder = queryBuilder.range(offset, offset + limit - 1).order('name', { ascending: true })
+
+    const { data: customers, error, count } = await queryBuilder
+
+    if (error) {
+      console.error('Database error:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    return createPaginatedResponse(customers || [], page, limit, count || 0)
   } catch (error) {
     return createErrorResponse(error)
   }
@@ -189,7 +203,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userDetails } = await getAuthenticatedUser(request)
+    const { userDetails, supabase } = await getAuthenticatedUser(request)
     const customerData = await validateRequest(request, CreateCustomerSchema)
 
     // Only salespeople and managers can create customers
@@ -197,19 +211,45 @@ export async function POST(request: NextRequest) {
       throw new ApiError(403, 'Access denied. Only salespeople and managers can create customers.')
     }
 
-    const customer = await CustomerService.createCustomer(
-      {
+    // Check for duplicate email
+    const { data: existingCustomers } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('email', customerData.email)
+      .is('deleted_at', null)
+
+    if (existingCustomers && existingCustomers.length > 0) {
+      throw new ApiError(400, 'Customer with this email already exists')
+    }
+
+    // Create the customer
+    const { data: newCustomer, error } = await supabase
+      .from('customers')
+      .insert({
         name: customerData.name,
-        contactPerson: customerData.contact_person,
+        contact_person: customerData.contact_person,
         email: customerData.email,
         phone: customerData.phone,
-        shippingAddress: customerData.shipping_address,
-        billingAddress: customerData.billing_address,
-      },
-      userDetails.id
-    )
+        shipping_address: customerData.shipping_address,
+        billing_address: customerData.billing_address,
+        created_by: userDetails.id,
+      })
+      .select()
+      .single()
 
-    return createSuccessResponse(customer, 'Customer created successfully', 201)
+    if (error) {
+      console.error('Customer creation error:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        userDetailsId: userDetails.id,
+      })
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    return createSuccessResponse(newCustomer, 'Customer created successfully', 201)
   } catch (error) {
     return createErrorResponse(error)
   }

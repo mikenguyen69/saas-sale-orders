@@ -42,6 +42,11 @@ export function useApiCall() {
 
         const token = getAccessToken()
 
+        if (!token) {
+          console.error('No access token available for API call to:', url)
+          throw new Error('Authentication required. Please sign in again.')
+        }
+
         // Create AbortController for timeout handling
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
@@ -51,7 +56,7 @@ export function useApiCall() {
           signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
+            Authorization: `Bearer ${token}`,
             ...options.headers,
           },
         })

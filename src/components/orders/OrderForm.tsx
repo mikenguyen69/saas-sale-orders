@@ -22,12 +22,12 @@ import { Delete, Add } from '@mui/icons-material'
 import { FileUpload } from '@/components/ui/FileUpload'
 import { useCreateOrder, useUpdateOrder, useSubmitOrder } from '@/hooks/useOrders'
 import { ProductSelector } from './ProductSelector'
-import type { SaleOrder, OrderItem, Product } from '@/types'
+import { CustomerSelector } from '@/components/customers/CustomerSelector'
+import { CustomerModal } from '@/components/customers/CustomerModal'
+import type { SaleOrder, OrderItem, Product, Customer } from '@/types'
 
 const orderSchema = yup.object({
-  customer_name: yup.string().required('Customer name is required'),
-  contact_person: yup.string().required('Contact person is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  customer_id: yup.string().required('Customer is required'),
   shipping_address: yup.string(),
   delivery_date: yup.string(),
   notes: yup.string(),
@@ -59,6 +59,8 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     return []
   })
   const [showProductSelector, setShowProductSelector] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>(
     order?.attachments?.map(attachment => attachment.file_url) || []
   )
@@ -72,19 +74,39 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<OrderFormData>({
     resolver: yupResolver(orderSchema),
     defaultValues: order
       ? {
-          customer_name: order.customer_name,
-          contact_person: order.contact_person,
-          email: order.email,
+          customer_id: order.customer_id || '',
           shipping_address: order.shipping_address || '',
           delivery_date: order.delivery_date || '',
           notes: order.notes || '',
         }
       : undefined,
   })
+
+  // Initialize selected customer from order data
+  React.useEffect(() => {
+    if (order?.customer_id) {
+      // In a real scenario, you might need to fetch the customer details
+      // For now, we'll create a customer object from order data
+      const customer: Customer = {
+        id: order.customer_id,
+        name: order.customer_name,
+        email: order.email,
+        contact_person: order.contact_person,
+        phone: '',
+        shipping_address: order.shipping_address || '',
+        billing_address: '',
+        tenant_id: '',
+        created_at: '',
+        updated_at: '',
+      }
+      setSelectedCustomer(customer)
+    }
+  }, [order])
 
   const calculateTotal = useCallback(() => {
     return orderItems.reduce((total, item) => total + (item.line_total || 0), 0)
@@ -216,10 +238,18 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
 
   const onSubmit = async (data: OrderFormData) => {
     try {
+      if (!selectedCustomer) {
+        console.error('No customer selected')
+        return
+      }
+
       const orderData = {
-        ...data,
+        customer_id: data.customer_id,
+        customer_name: selectedCustomer.name,
+        contact_person: selectedCustomer.contact_person,
+        email: selectedCustomer.email,
         notes: data.notes || '',
-        shipping_address: data.shipping_address || '',
+        shipping_address: data.shipping_address || selectedCustomer.shipping_address || '',
         delivery_date: data.delivery_date || '',
         items: orderItems.map(item => ({
           product_id: item.product_id,
@@ -247,13 +277,21 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   }
 
   const handleSubmitOrder = async () => {
+    if (!selectedCustomer) {
+      console.error('No customer selected')
+      return
+    }
+
     if (!order?.id) {
       // Save first, then submit
       const data = watch()
       const orderData = {
-        ...data,
+        customer_id: data.customer_id,
+        customer_name: selectedCustomer.name,
+        contact_person: selectedCustomer.contact_person,
+        email: selectedCustomer.email,
         notes: data.notes || '',
-        shipping_address: data.shipping_address || '',
+        shipping_address: data.shipping_address || selectedCustomer.shipping_address || '',
         delivery_date: data.delivery_date || '',
         items: orderItems.map(item => ({
           product_id: item.product_id,
@@ -291,39 +329,48 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
             </Typography>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('customer_name')}
-                  label="Customer Name"
-                  fullWidth
-                  error={!!errors.customer_name}
-                  helperText={errors.customer_name?.message}
+              <Grid item xs={12}>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={customer => {
+                    setSelectedCustomer(customer)
+                    if (customer) {
+                      setValue('customer_id', customer.id)
+                    } else {
+                      setValue('customer_id', '')
+                    }
+                  }}
+                  onAddNew={() => setShowCustomerModal(true)}
                   disabled={isLoading}
+                  error={!!errors.customer_id}
+                  helperText={errors.customer_id?.message}
+                  required
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('contact_person')}
-                  label="Contact Person"
-                  fullWidth
-                  error={!!errors.contact_person}
-                  helperText={errors.contact_person?.message}
-                  disabled={isLoading}
-                />
-              </Grid>
+              {selectedCustomer && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Contact Person"
+                      value={selectedCustomer.contact_person}
+                      fullWidth
+                      disabled
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('email')}
-                  label="Email"
-                  type="email"
-                  fullWidth
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  disabled={isLoading}
-                />
-              </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Email"
+                      value={selectedCustomer.email}
+                      fullWidth
+                      disabled
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Grid>
+                </>
+              )}
 
               <Grid item xs={12} md={6}>
                 <TextField
@@ -336,13 +383,12 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   {...register('shipping_address')}
                   label="Shipping Address"
                   fullWidth
-                  multiline
-                  rows={2}
+                  placeholder={selectedCustomer?.shipping_address || 'Enter shipping address'}
                   disabled={isLoading}
                 />
               </Grid>
@@ -468,6 +514,16 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
         open={showProductSelector}
         onClose={() => setShowProductSelector(false)}
         onSelect={handleAddProduct}
+      />
+
+      <CustomerModal
+        open={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onCustomerCreated={customer => {
+          setSelectedCustomer(customer)
+          setValue('customer_id', customer.id)
+          setShowCustomerModal(false)
+        }}
       />
     </Box>
   )

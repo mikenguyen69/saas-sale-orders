@@ -8,6 +8,7 @@ import * as yup from 'yup'
 import { Customer, CustomerCreateData } from '@/types'
 import { CustomerApi } from '@/services/customerApi'
 import { isApiError } from '@/utils/api'
+import { useCheckEmailAvailability } from '@/hooks/useCustomers'
 
 const customerSchema = yup.object({
   name: yup.string().required('Customer name is required').max(200, 'Customer name too long'),
@@ -43,6 +44,7 @@ export function CustomerForm({
   resetAfterCreate = false,
 }: CustomerFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const checkEmailMutation = useCheckEmailAvailability()
 
   const {
     control,
@@ -50,8 +52,6 @@ export function CustomerForm({
     reset,
     formState: { errors, isDirty, isSubmitting },
     setError,
-    clearErrors,
-    watch,
   } = useForm<CustomerFormData>({
     resolver: yupResolver(customerSchema),
     defaultValues: {
@@ -63,8 +63,6 @@ export function CustomerForm({
       billing_address: customer?.billing_address || '',
     },
   })
-
-  const email = watch('email')
 
   // Reset form when customer prop changes
   useEffect(() => {
@@ -80,21 +78,17 @@ export function CustomerForm({
     }
   }, [customer, reset])
 
-  // Email duplicate validation with race condition protection
-  useEffect(() => {
-    const controller = new AbortController()
-
-    const checkDuplicateEmail = async () => {
+  // Email validation - check for duplicates on submit
+  const checkEmailDuplicate = useCallback(
+    async (email: string): Promise<boolean> => {
       if (!email || email === customer?.email) {
-        clearErrors('email')
-        return
+        return true // Email is valid (unchanged or empty)
       }
 
       try {
-        const isAvailable = await CustomerApi.checkEmailAvailability({
+        const isAvailable = await checkEmailMutation.mutateAsync({
           email,
           excludeCustomerId: customer?.id,
-          signal: controller.signal,
         })
 
         if (!isAvailable) {
@@ -102,24 +96,28 @@ export function CustomerForm({
             type: 'manual',
             message: 'A customer with this email already exists',
           })
+          return false
         }
-      } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-          console.error('Error checking duplicate email:', error)
-        }
-      }
-    }
 
-    const timeoutId = setTimeout(checkDuplicateEmail, 300)
-    return () => {
-      controller.abort()
-      clearTimeout(timeoutId)
-    }
-  }, [email, customer?.email, customer?.id, setError, clearErrors])
+        return true
+      } catch (error) {
+        console.error('Error checking duplicate email:', error)
+        // Allow submission if check fails to avoid blocking user
+        return true
+      }
+    },
+    [customer?.email, customer?.id, setError, checkEmailMutation]
+  )
 
   const handleFormSubmit = useCallback(
     async (data: CustomerFormData, selectAfterSave = false) => {
       setSubmitError(null)
+
+      // Validate email for duplicates before submitting
+      const isEmailValid = await checkEmailDuplicate(data.email)
+      if (!isEmailValid) {
+        return // Stop submission if email is duplicate
+      }
 
       try {
         const customerData: CustomerCreateData = {
@@ -182,7 +180,16 @@ export function CustomerForm({
         }
       }
     },
-    [mode, customer, onSave, onSaveAndSelect, reset, resetAfterCreate, setError]
+    [
+      mode,
+      customer,
+      onSave,
+      onSaveAndSelect,
+      reset,
+      resetAfterCreate,
+      setError,
+      checkEmailDuplicate,
+    ]
   )
 
   const onSubmit = (data: CustomerFormData) => {
