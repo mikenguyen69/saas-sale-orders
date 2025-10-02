@@ -1,9 +1,10 @@
 'use client'
 
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Typography, Grid, Card, CardContent, Box, CircularProgress, Alert } from '@mui/material'
+import { Typography, Grid, Card, CardContent, Box, Alert } from '@mui/material'
 import { Receipt, Inventory, People, TrendingUp } from '@mui/icons-material'
 import { useDashboardStats, useRecentOrders, useLowStockProducts } from '@/hooks/useDashboard'
+import { DashboardStatsSkeleton, ListSkeleton } from '@/components/ui/SkeletonLoader'
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats()
@@ -53,37 +54,41 @@ export default function DashboardPage() {
         Dashboard
       </Typography>
 
-      <Grid container spacing={3}>
-        {statItems.map(stat => {
-          const IconComponent = stat.icon
-          return (
-            <Grid item xs={12} sm={6} md={3} key={stat.title}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Box
-                      sx={{
-                        p: 1,
-                        borderRadius: 1,
-                        backgroundColor: `${stat.color}20`,
-                        color: stat.color,
-                      }}
-                    >
-                      <IconComponent />
+      {statsLoading ? (
+        <DashboardStatsSkeleton />
+      ) : (
+        <Grid container spacing={3}>
+          {statItems.map(stat => {
+            const IconComponent = stat.icon
+            return (
+              <Grid item xs={12} sm={6} md={3} key={stat.title}>
+                <Card>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Box
+                        sx={{
+                          p: 1,
+                          borderRadius: 1,
+                          backgroundColor: `${stat.color}20`,
+                          color: stat.color,
+                        }}
+                      >
+                        <IconComponent />
+                      </Box>
+                      <Box>
+                        <Typography variant="h4" component="div">
+                          {stat.value}
+                        </Typography>
+                        <Typography color="text.secondary">{stat.title}</Typography>
+                      </Box>
                     </Box>
-                    <Box>
-                      <Typography variant="h4" component="div">
-                        {statsLoading ? <CircularProgress size={24} /> : stat.value}
-                      </Typography>
-                      <Typography color="text.secondary">{stat.title}</Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          )
-        })}
-      </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )
+          })}
+        </Grid>
+      )}
 
       <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 2 }}>
         Quick Actions
@@ -97,9 +102,7 @@ export default function DashboardPage() {
                 Recent Orders
               </Typography>
               {ordersLoading ? (
-                <Box display="flex" justifyContent="center" py={2}>
-                  <CircularProgress size={24} />
-                </Box>
+                <ListSkeleton count={3} />
               ) : recentOrders && recentOrders.length > 0 ? (
                 <Box>
                   {recentOrders.slice(0, 3).map((order: any) => (
@@ -129,9 +132,7 @@ export default function DashboardPage() {
                 Low Stock Products
               </Typography>
               {productsLoading ? (
-                <Box display="flex" justifyContent="center" py={2}>
-                  <CircularProgress size={24} />
-                </Box>
+                <ListSkeleton count={3} />
               ) : lowStockProducts && lowStockProducts.length > 0 ? (
                 <Box>
                   {lowStockProducts.slice(0, 3).map((product: any) => (

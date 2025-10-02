@@ -15,6 +15,7 @@ import {
   Alert,
   Divider,
   Chip,
+  CircularProgress,
 } from '@mui/material'
 import { Save, Send, AttachFile } from '@mui/icons-material'
 import { DataGrid, GridColDef, GridRowModel, GridActionsCellItem } from '@mui/x-data-grid'
@@ -487,20 +488,28 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
 
           <Button
             variant="outlined"
-            startIcon={<Save />}
+            startIcon={
+              createOrderMutation.isPending || updateOrderMutation.isPending ? (
+                <CircularProgress size={20} />
+              ) : (
+                <Save />
+              )
+            }
             onClick={handleSaveDraft}
             disabled={isLoading || orderItems.length === 0}
           >
-            Save Draft
+            {createOrderMutation.isPending || updateOrderMutation.isPending
+              ? 'Saving...'
+              : 'Save Draft'}
           </Button>
 
           <Button
             variant="contained"
-            startIcon={<Send />}
+            startIcon={submitOrderMutation.isPending ? <CircularProgress size={20} /> : <Send />}
             onClick={handleSubmitOrder}
             disabled={isLoading || orderItems.length === 0}
           >
-            Submit Order
+            {submitOrderMutation.isPending ? 'Submitting...' : 'Submit Order'}
           </Button>
         </Box>
       </form>
