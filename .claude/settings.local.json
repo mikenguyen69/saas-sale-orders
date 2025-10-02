@@ -1,19 +1,55 @@
 {
   "permissions": {
     "allow": [
-      "Bash(echo \"- sb-<project-ref>-auth-token\")"
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []
   },
   "hooks": {
-    "pre": {
-      "Edit": "/quality",
-      "Write": "npm run lint:check {filename}"
-    },
-    "post": {
-      "Edit": "/commit-work Auto-commit: Updated {filename}"
-    }
+    "PreToolUse": [
+      {
+        "matcher": {
+          "tools": [
+            "Edit"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/quality"
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "tools": [
+            "Write"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run lint:check {filename}"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tools": [
+            "Edit"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/commit-work Auto-commit: Updated {filename}"
+          }
+        ]
+      }
+    ]
   },
   "mcpServers": [
     "jira",

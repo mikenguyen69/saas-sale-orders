@@ -60,7 +60,7 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   })
   const [showProductSelector, setShowProductSelector] = useState(false)
   const [showCustomerModal, setShowCustomerModal] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(order?.customer || null)
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>(
     order?.attachments?.map(attachment => attachment.file_url) || []
   )
@@ -237,6 +237,11 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   }, [])
 
   const onSubmit = async (data: OrderFormData) => {
+    if (!data.customer_id) {
+      console.error('Customer is required')
+      return
+    }
+
     try {
       if (!selectedCustomer) {
         console.error('No customer selected')
@@ -285,6 +290,12 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     if (!order?.id) {
       // Save first, then submit
       const data = watch()
+
+      if (!data.customer_id) {
+        console.error('Customer is required')
+        return
+      }
+
       const orderData = {
         customer_id: data.customer_id,
         customer_name: selectedCustomer.name,
@@ -519,10 +530,9 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
       <CustomerModal
         open={showCustomerModal}
         onClose={() => setShowCustomerModal(false)}
-        onCustomerCreated={customer => {
+        onSave={customer => {
           setSelectedCustomer(customer)
           setValue('customer_id', customer.id)
-          setShowCustomerModal(false)
         }}
       />
     </Box>
