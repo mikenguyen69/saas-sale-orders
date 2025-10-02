@@ -73,6 +73,46 @@ export function useCustomerSearch(searchTerm: string, enabled = true) {
   )
 }
 
+export function useCheckEmailAvailability() {
+  const { callApi } = useApiCall()
+
+  return useMutation({
+    mutationFn: async ({
+      email,
+      excludeCustomerId,
+    }: {
+      email: string
+      excludeCustomerId?: string
+    }) => {
+      const searchParams = new URLSearchParams()
+      searchParams.append('search', email)
+      searchParams.append('limit', '1')
+
+      const response = await callApi<{ success: boolean; data: Customer[] }>(
+        `/api/v1/customers?${searchParams.toString()}`,
+        {},
+        { showLoading: false, showErrorNotification: false }
+      )
+
+      const customers = response.data || []
+
+      if (customers.length === 0) {
+        return true // Email is available
+      }
+
+      const existingCustomer = customers[0]
+      const emailMatches = existingCustomer.email.toLowerCase() === email.toLowerCase()
+
+      // If we're excluding a specific customer (edit mode), check if it's the same customer
+      if (emailMatches && excludeCustomerId && existingCustomer.id === excludeCustomerId) {
+        return true // Same customer, email is available for them
+      }
+
+      return !emailMatches // Email is available if it doesn't match
+    },
+  })
+}
+
 export function useCreateCustomer() {
   const { callApi } = useApiCall()
   const queryClient = useQueryClient()

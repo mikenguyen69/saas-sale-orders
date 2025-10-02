@@ -7,7 +7,6 @@ import {
   ApiError,
 } from '@/lib/api-utils'
 import { UpdateCustomerSchema } from '@/lib/validations/customer'
-import { CustomerService } from '@/services/customerService'
 
 /**
  * @swagger
@@ -60,14 +59,24 @@ import { CustomerService } from '@/services/customerService'
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { userDetails } = await getAuthenticatedUser(request)
+    const { userDetails, supabase } = await getAuthenticatedUser(request)
 
     // Only salespeople and managers can access customers
     if (!['salesperson', 'manager'].includes(userDetails.role)) {
       throw new ApiError(403, 'Access denied. Only salespeople and managers can access customers.')
     }
 
-    const customer = await CustomerService.getCustomer(params.id, userDetails.id)
+    const { data: customer, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', params.id)
+      .eq('created_by', userDetails.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (error || !customer) {
+      throw new ApiError(404, 'Customer not found')
+    }
 
     return createSuccessResponse(customer)
   } catch (error) {
@@ -172,7 +181,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { userDetails } = await getAuthenticatedUser(request)
+    const { userDetails, supabase } = await getAuthenticatedUser(request)
     const customerData = await validateRequest(request, UpdateCustomerSchema)
 
     // Only salespeople and managers can update customers
@@ -180,20 +189,58 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       throw new ApiError(403, 'Access denied. Only salespeople and managers can update customers.')
     }
 
-    const customer = await CustomerService.updateCustomer(
-      params.id,
-      {
-        name: customerData.name,
-        contactPerson: customerData.contact_person,
-        email: customerData.email,
-        phone: customerData.phone,
-        shippingAddress: customerData.shipping_address,
-        billingAddress: customerData.billing_address,
-      },
-      userDetails.id
-    )
+    // Check if customer exists and belongs to user
+    const { data: existingCustomer, error: fetchError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', params.id)
+      .eq('created_by', userDetails.id)
+      .is('deleted_at', null)
+      .single()
 
-    return createSuccessResponse(customer, 'Customer updated successfully')
+    if (fetchError || !existingCustomer) {
+      throw new ApiError(404, 'Customer not found')
+    }
+
+    // Check for duplicate email if email is being updated
+    if (customerData.email && customerData.email !== existingCustomer.email) {
+      const { data: duplicateCustomers } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', customerData.email)
+        .is('deleted_at', null)
+        .neq('id', params.id)
+
+      if (duplicateCustomers && duplicateCustomers.length > 0) {
+        throw new ApiError(400, 'Customer with this email already exists')
+      }
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {}
+    if (customerData.name !== undefined) updateData.name = customerData.name
+    if (customerData.contact_person !== undefined)
+      updateData.contact_person = customerData.contact_person
+    if (customerData.email !== undefined) updateData.email = customerData.email
+    if (customerData.phone !== undefined) updateData.phone = customerData.phone
+    if (customerData.shipping_address !== undefined)
+      updateData.shipping_address = customerData.shipping_address
+    if (customerData.billing_address !== undefined)
+      updateData.billing_address = customerData.billing_address
+
+    // Update the customer
+    const { data: updatedCustomer, error: updateError } = await supabase
+      .from('customers')
+      .update(updateData)
+      .eq('id', params.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      throw new Error(`Database error: ${updateError.message}`)
+    }
+
+    return createSuccessResponse(updatedCustomer, 'Customer updated successfully')
   } catch (error) {
     return createErrorResponse(error)
   }
@@ -257,14 +304,50 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  */
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { userDetails } = await getAuthenticatedUser(request)
+    const { userDetails, supabase } = await getAuthenticatedUser(request)
 
     // Only salespeople and managers can delete customers
     if (!['salesperson', 'manager'].includes(userDetails.role)) {
       throw new ApiError(403, 'Access denied. Only salespeople and managers can delete customers.')
     }
 
-    await CustomerService.deleteCustomer(params.id, userDetails.id)
+    // Check if customer exists and belongs to user
+    const { data: existingCustomer, error: fetchError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', params.id)
+      .eq('created_by', userDetails.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (fetchError || !existingCustomer) {
+      throw new ApiError(404, 'Customer not found')
+    }
+
+    // Check if customer has any orders
+    const { count, error: countError } = await supabase
+      .from('sale_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('customer_id', params.id)
+      .is('deleted_at', null)
+
+    if (countError) {
+      throw new Error(`Database error: ${countError.message}`)
+    }
+
+    if (count && count > 0) {
+      throw new ApiError(400, 'Cannot delete customer with existing orders')
+    }
+
+    // Soft delete the customer
+    const { error: deleteError } = await supabase
+      .from('customers')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', params.id)
+
+    if (deleteError) {
+      throw new Error(`Database error: ${deleteError.message}`)
+    }
 
     return createSuccessResponse(null, 'Customer deleted successfully')
   } catch (error) {

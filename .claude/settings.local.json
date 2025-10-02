@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dos2unix:*)"
+      "Bash(npm run format:*)"
     ],
     "deny": [],
     "ask": []
@@ -9,18 +9,45 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": {"tools": ["Edit"]},
-        "hooks": [{"type": "command", "command": "/quality"}]
+        "matcher": {
+          "tools": [
+            "Edit"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/quality"
+          }
+        ]
       },
       {
-        "matcher": {"tools": ["Write"]},
-        "hooks": [{"type": "command", "command": "npm run lint:check {filename}"}]
+        "matcher": {
+          "tools": [
+            "Write"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run lint:check {filename}"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": {"tools": ["Edit"]},
-        "hooks": [{"type": "command", "command": "/commit-work Auto-commit: Updated {filename}"}]
+        "matcher": {
+          "tools": [
+            "Edit"
+          ]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/commit-work Auto-commit: Updated {filename}"
+          }
+        ]
       }
     ]
   },

@@ -9,7 +9,7 @@ RETURNS INTEGER AS $$
 DECLARE
     customer_count INTEGER := 0;
     order_record RECORD;
-    customer_id UUID;
+    v_customer_id UUID;
 BEGIN
     -- Loop through all unique customer combinations from existing orders
     FOR order_record IN (
@@ -26,13 +26,13 @@ BEGIN
     ) LOOP
 
         -- Check if customer already exists for this user (prevent duplicates)
-        SELECT id INTO customer_id
+        SELECT id INTO v_customer_id
         FROM customers
         WHERE email = order_record.email
         AND created_by = order_record.salesperson_id;
 
         -- If customer doesn't exist, create it
-        IF customer_id IS NULL THEN
+        IF v_customer_id IS NULL THEN
             INSERT INTO customers (
                 id,
                 name,
@@ -55,20 +55,20 @@ BEGIN
                 order_record.salesperson_id,
                 NOW(),
                 NOW()
-            ) RETURNING id INTO customer_id;
+            ) RETURNING id INTO v_customer_id;
 
             customer_count := customer_count + 1;
         END IF;
 
         -- Link all matching orders to this customer
         UPDATE sale_orders
-        SET customer_id = customer_id,
+        SET customer_id = v_customer_id,
             updated_at = NOW()
         WHERE customer_name = order_record.customer_name
         AND contact_person = order_record.contact_person
         AND email = order_record.email
         AND salesperson_id = order_record.salesperson_id
-        AND customer_id IS NULL
+        AND sale_orders.customer_id IS NULL
         AND deleted_at IS NULL;
 
     END LOOP;

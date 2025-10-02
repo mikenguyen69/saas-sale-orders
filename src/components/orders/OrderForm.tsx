@@ -59,11 +59,11 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     return []
   })
   const [showProductSelector, setShowProductSelector] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(order?.customer || null)
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>(
     order?.attachments?.map(attachment => attachment.file_url) || []
   )
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(order?.customer || null)
-  const [showCustomerModal, setShowCustomerModal] = useState(false)
 
   const createOrderMutation = useCreateOrder()
   const updateOrderMutation = useUpdateOrder()
@@ -87,30 +87,30 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
       : undefined,
   })
 
+  // Initialize selected customer from order data
+  React.useEffect(() => {
+    if (order?.customer_id) {
+      // In a real scenario, you might need to fetch the customer details
+      // For now, we'll create a customer object from order data
+      const customer: Customer = {
+        id: order.customer_id,
+        name: order.customer_name,
+        email: order.email,
+        contact_person: order.contact_person,
+        phone: '',
+        shipping_address: order.shipping_address || '',
+        billing_address: '',
+        tenant_id: '',
+        created_at: '',
+        updated_at: '',
+      }
+      setSelectedCustomer(customer)
+    }
+  }, [order])
+
   const calculateTotal = useCallback(() => {
     return orderItems.reduce((total, item) => total + (item.line_total || 0), 0)
   }, [orderItems])
-
-  const handleCustomerChange = (customer: Customer | null) => {
-    setSelectedCustomer(customer)
-    if (customer) {
-      setValue('customer_id', customer.id)
-      // Auto-fill shipping address if customer has one
-      if (customer.shipping_address && !watch('shipping_address')) {
-        setValue('shipping_address', customer.shipping_address)
-      }
-    } else {
-      setValue('customer_id', '')
-    }
-  }
-
-  const handleCustomerSaved = (customer: Customer) => {
-    setSelectedCustomer(customer)
-    setValue('customer_id', customer.id)
-    if (customer.shipping_address && !watch('shipping_address')) {
-      setValue('shipping_address', customer.shipping_address)
-    }
-  }
 
   const handleAddProduct = (product: Product) => {
     const existingItemIndex = orderItems.findIndex(item => item.product_id === product.id)
@@ -243,10 +243,18 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
     }
 
     try {
+      if (!selectedCustomer) {
+        console.error('No customer selected')
+        return
+      }
+
       const orderData = {
         customer_id: data.customer_id,
+        customer_name: selectedCustomer.name,
+        contact_person: selectedCustomer.contact_person,
+        email: selectedCustomer.email,
         notes: data.notes || '',
-        shipping_address: data.shipping_address || '',
+        shipping_address: data.shipping_address || selectedCustomer.shipping_address || '',
         delivery_date: data.delivery_date || '',
         items: orderItems.map(item => ({
           product_id: item.product_id,
@@ -274,6 +282,11 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
   }
 
   const handleSubmitOrder = async () => {
+    if (!selectedCustomer) {
+      console.error('No customer selected')
+      return
+    }
+
     if (!order?.id) {
       // Save first, then submit
       const data = watch()
@@ -285,8 +298,11 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
 
       const orderData = {
         customer_id: data.customer_id,
+        customer_name: selectedCustomer.name,
+        contact_person: selectedCustomer.contact_person,
+        email: selectedCustomer.email,
         notes: data.notes || '',
-        shipping_address: data.shipping_address || '',
+        shipping_address: data.shipping_address || selectedCustomer.shipping_address || '',
         delivery_date: data.delivery_date || '',
         items: orderItems.map(item => ({
           product_id: item.product_id,
@@ -327,14 +343,19 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
               <Grid item xs={12}>
                 <CustomerSelector
                   value={selectedCustomer}
-                  onChange={handleCustomerChange}
+                  onChange={customer => {
+                    setSelectedCustomer(customer)
+                    if (customer) {
+                      setValue('customer_id', customer.id)
+                    } else {
+                      setValue('customer_id', '')
+                    }
+                  }}
                   onAddNew={() => setShowCustomerModal(true)}
+                  disabled={isLoading}
                   error={!!errors.customer_id}
                   helperText={errors.customer_id?.message}
-                  disabled={isLoading}
                   required
-                  label="Customer"
-                  placeholder="Search and select a customer..."
                 />
               </Grid>
 
@@ -346,9 +367,7 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
                       value={selectedCustomer.contact_person}
                       fullWidth
                       disabled
-                      InputProps={{
-                        readOnly: true,
-                      }}
+                      InputProps={{ readOnly: true }}
                     />
                   </Grid>
 
@@ -358,9 +377,7 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
                       value={selectedCustomer.email}
                       fullWidth
                       disabled
-                      InputProps={{
-                        readOnly: true,
-                      }}
+                      InputProps={{ readOnly: true }}
                     />
                   </Grid>
                 </>
@@ -377,13 +394,12 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   {...register('shipping_address')}
                   label="Shipping Address"
                   fullWidth
-                  multiline
-                  rows={2}
+                  placeholder={selectedCustomer?.shipping_address || 'Enter shipping address'}
                   disabled={isLoading}
                 />
               </Grid>
@@ -514,9 +530,10 @@ export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
       <CustomerModal
         open={showCustomerModal}
         onClose={() => setShowCustomerModal(false)}
-        onSave={handleCustomerSaved}
-        onSaveAndSelect={handleCustomerSaved}
-        mode="create"
+        onSave={customer => {
+          setSelectedCustomer(customer)
+          setValue('customer_id', customer.id)
+        }}
       />
     </Box>
   )
